@@ -1,11 +1,12 @@
-import ComplaintForm from "../../components/complaints/ComplaintForm";
+import CitizenOverview from "./CitizenOverview";
 
 function CitizenDashboard() {
     return (
-        <section>
-            <h2>Citizen Dashboard</h2>
-            <ComplaintForm />
-        </section>
+        <>
+            <h1>Citizen Dashboard</h1>
+            <CitizenOverview />
+            <p>Use the menu to manage your complaints and profile.</p>
+        </>
     );
 }
 

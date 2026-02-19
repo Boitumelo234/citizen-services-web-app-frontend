@@ -7,3 +7,22 @@ body {
 .container {
     padding: 40px;
 }
+
+.section {
+    background: white;
+    padding: 30px;
+    margin-bottom: 20px;
+    border-radius: 6px;
+}
+
+.hero {
+    background: #003366;
+    color: white;
+    padding: 60px 40px;
+}
+
+.cta {
+    background: #e6eef6;
+    padding: 30px;
+    text-align: center;
+}
