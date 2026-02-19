@@ -14,6 +14,7 @@ function Sidebar({ role }) {
                     <Link to="/citizen/map">Complaint Map</Link>
                     <Link to="/citizen/notifications">Notifications</Link>
                     <Link to="/citizen/profile">Profile</Link>
+                    <Link to="/">Logout</Link>
                 </>
             )}
 
@@ -27,6 +28,7 @@ function Sidebar({ role }) {
                     <Link to="/admin/reports">Reports</Link>
                     <Link to="/admin/users">Users</Link>
                     <Link to="/admin/settings">System Settings</Link>
+                    <Link to="/">Logout</Link>
                 </>
             )}
 

@@ -1,28 +1,62 @@
-body {
-    margin: 0;
-    font-family: "Segoe UI", sans-serif;
-    background: #f4f6f8;
+/* ============================= */
+/* NAVBAR (STICKY & PROFESSIONAL) */
+/* ============================= */
+
+.navbar {
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+
+    background: #ffffff;
+    padding: 15px 40px;
+
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 }
 
-.container {
-    padding: 40px;
+
+
+/* ============================= */
+/* NAV LINKS */
+/* ============================= */
+
+.nav-links {
+    display: flex;
+    align-items: center;
 }
 
-.section {
-    background: white;
-    padding: 30px;
-    margin-bottom: 20px;
-    border-radius: 6px;
+.nav-links a {
+    margin-left: 18px;
+    text-decoration: none;
+    color: #333;
+    font-weight: 500;
 }
 
-.hero {
-    background: #003366;
+/* ============================= */
+/* BUTTON STYLES */
+/* ============================= */
+
+.nav-btn {
+    padding: 8px 14px;
+    border-radius: 4px;
+    font-weight: bold;
+}
+
+/* Login button */
+.login-btn {
+    border: 1px solid #003366;
+    color: #003366;
+}
+
+/* Register button (primary action) */
+.register-btn {
+    background-color: #003366;
     color: white;
-    padding: 60px 40px;
 }
 
 .cta {
-    background: #e6eef6;
-    padding: 30px;
     text-align: center;
 }
