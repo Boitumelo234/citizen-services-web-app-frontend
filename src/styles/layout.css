@@ -1,0 +1,30 @@
+.navbar {
+    background: #003366;
+    color: white;
+    padding: 15px 30px;
+    display: flex;
+    justify-content: space-between;
+}
+
+.navbar a {
+    color: white;
+    margin-left: 15px;
+    text-decoration: none;
+}
+
+.footer {
+    background: #003366;
+    color: white;
+    text-align: center;
+    padding: 10px;
+}
+
+.dashboard {
+    display: flex;
+    min-height: 100vh;
+}
+
+.dashboard-content {
+    flex: 1;
+    padding: 30px;
+}
