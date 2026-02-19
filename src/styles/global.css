@@ -60,3 +60,20 @@
 .cta {
     text-align: center;
 }
+
+/* ============================= */
+/* TEXT ALIGNMENT HELPERS */
+/* ============================= */
+
+.center-text {
+    text-align: center;
+}
+
+/* Center lists cleanly */
+.center-list {
+    list-style-position: inside;
+    padding: 0;
+    margin: 0 auto;
+    display: inline-block;
+    text-align: left; /* keeps list readable */
+}
