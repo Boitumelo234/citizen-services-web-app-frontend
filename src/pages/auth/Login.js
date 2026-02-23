@@ -1,7 +1,7 @@
 // src/pages/auth/Login.js
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { jwtDecode } from "jwt-decode";          // ← correct import with curly braces
+import { jwtDecode } from "jwt-decode";
 import Input from "../../components/common/Input";
 import Button from "../../components/common/Button";
 
@@ -18,39 +18,41 @@ function Login() {
         setLoading(true);
 
         try {
-            const response = await fetch("http://127.0.0.1:8000/api/auth/login", {
+            const response = await fetch("http://localhost:8080/api/auth/login", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/x-www-form-urlencoded",
                 },
                 body: new URLSearchParams({
                     username: email,
-                    password,
+                    password: password,
                 }),
             });
 
             const data = await response.json();
 
             if (!response.ok) {
-                throw new Error(data.detail || "Login failed");
+                // Now safely read data.error (because backend returns JSON)
+                throw new Error(data.error || "Login failed");
             }
 
             // Save token
             localStorage.setItem("access_token", data.access_token);
 
-            // Decode JWT to check role
-            const decoded = jwtDecode(data.access_token);   // ← correct usage
-            const role = decoded.role;                      // ← role comes from backend JWT
+            // Decode to get role (normalize case)
+            const decoded = jwtDecode(data.access_token);
+            const role = (decoded.role || "").toLowerCase();
 
             // Redirect based on role
             if (role === "admin") {
-                navigate("/admin-dashboard");
+                navigate("/admin");
                 alert("Welcome Admin!");
             } else {
-                navigate("/citizen-dashboard");
+                navigate("/citizen");
                 alert("Welcome Citizen!");
             }
         } catch (err) {
+            console.error("Login error:", err);
             setError(err.message || "Invalid email or password");
         } finally {
             setLoading(false);
@@ -78,6 +80,7 @@ function Login() {
                     required
                 />
                 <Button
+                    type="submit"
                     text={loading ? "Logging in..." : "Login"}
                     disabled={loading}
                 />

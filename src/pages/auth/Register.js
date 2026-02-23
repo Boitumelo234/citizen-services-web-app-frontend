@@ -12,33 +12,37 @@ function Register() {
     const navigate = useNavigate();
 
     const handleSubmit = async (e) => {
-        e.preventDefault();           // ← this stops page refresh
-        console.log("Form submit clicked!"); // ← debug: must appear in console
+        e.preventDefault();
+        console.log("Register form submitted");
         console.log("Email:", email, "Password:", password);
 
         setError("");
         setLoading(true);
 
         try {
-            const response = await fetch("http://127.0.0.1:8000/api/auth/register", {
+            const response = await fetch("http://localhost:8080/api/auth/register", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
                 },
-                body: JSON.stringify({ email, password }),
+                body: JSON.stringify({
+                    email: email,
+                    password: password,
+                }),
             });
 
             const data = await response.json();
 
             if (!response.ok) {
-                throw new Error(data.detail || "Registration failed");
+                // Safely read data.error (backend now returns JSON)
+                throw new Error(data.error || "Registration failed");
             }
 
-            alert("Registration successful! Please log in.");
+            alert(data.message || "Registration successful! You can now log in.");
             navigate("/login");
         } catch (err) {
-            console.error("Registration error:", err); // ← debug error
-            setError(err.message || "Something went wrong");
+            console.error("Registration error:", err);
+            setError(err.message || "Something went wrong. Try again.");
         } finally {
             setLoading(false);
         }
@@ -65,6 +69,7 @@ function Register() {
                     required
                 />
                 <Button
+                    type="submit"
                     text={loading ? "Registering..." : "Register"}
                     disabled={loading}
                 />
