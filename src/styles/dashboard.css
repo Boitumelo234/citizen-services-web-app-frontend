@@ -1,28 +1,322 @@
+/* dashboard.css - Shared professional styles for Rustenburg Citizen Services Platform */
+/* Light theme with blue accents — suitable for citizen & admin dashboards */
+/* Sidebar dark for contrast — municipal/govt feel */
+
+:root {
+    --primary: #2563eb;          /* blue-600 main action color */
+    --primary-dark: #1d4ed8;     /* hover */
+    --success: #16a34a;          /* green-600 resolved */
+    --warning: #d97706;          /* amber-600 pending/open */
+    --danger: #dc2626;
+    --info: #0284c7;
+    --text-dark: #111827;        /* gray-900 main text */
+    --text-medium: #4b5563;      /* gray-600 subtitles */
+    --text-light: #6b7280;       /* gray-500 labels */
+    --bg-light: #f9fafb;         /* gray-50 page bg */
+    --card-bg: #ffffff;
+    --border: #e5e7eb;           /* gray-200 borders */
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
+    --sidebar-bg: #1e2a38;       /* dark nav bg */
+    --sidebar-text: #ffffff;
+    --radius-lg: 0.75rem;        /* 12px buttons */
+    --radius-xl: 1rem;           /* 16px cards */
+    --radius-2xl: 1.5rem;        /* 24px larger cards */
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html {
+    height: 100%;
+}
+
+body {
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background-color: var(--bg-light);
+    color: var(--text-dark);
+    line-height: 1.6;
+    min-height: 100%;
+}
+
+/* Layout wrappers */
+.dashboard-root {
+    min-height: 100vh;
+    background-color: var(--bg-light);
+    display: flex;
+}
+
+.dashboard-container {
+    flex: 1;
+    max-width: 90rem;            /* wider than 80rem for larger screens */
+    margin: 0 auto;
+    padding: 1.5rem 1rem;
+}
+
+@media (min-width: 768px) {
+    .dashboard-container {
+        padding: 2rem;
+    }
+}
+
+/* Sidebar (dark theme) */
 .sidebar {
     width: 220px;
-    background: #1e2a38;
-    padding: 20px;
+    background: var(--sidebar-bg);
+    color: var(--sidebar-text);
+    padding: 1.5rem 1rem;
+    flex-shrink: 0;
+    height: 100vh;
+    overflow-y: auto;
+    position: sticky;
+    top: 0;
 }
 
 .sidebar a {
     display: block;
-    color: white;
-    margin-bottom: 10px;
+    color: var(--sidebar-text);
+    padding: 0.75rem 1rem;
+    margin-bottom: 0.5rem;
     text-decoration: none;
+    border-radius: var(--radius-lg);
+    transition: background 0.2s;
 }
 
-.overview-cards {
-    display: flex;
-    gap: 20px;
-    margin-top: 20px;
+.sidebar a:hover,
+.sidebar a.active {
+    background: rgba(255,255,255,0.1);
 }
 
+/* Typography ──────────────────────────────────────────────── */
+.dashboard-title {
+    font-size: 2.25rem;
+    font-weight: 700;
+    color: #1f2937;              /* gray-800 */
+    margin-bottom: 0.25rem;
+    padding-left: 0.5rem;        /* ← prevents touching left edge */
+}
+
+.subtitle {
+    color: var(--text-medium);
+    font-size: 1rem;
+    margin-bottom: 1.5rem;
+    padding-left: 0.5rem;
+}
+
+.section-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 1.25rem;
+    padding-left: 0.75rem;       /* ← main fix: space from left border */
+}
+
+.card-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    padding-left: 0.75rem;       /* ← consistent with section-title */
+}
+
+/* Universal card ──────────────────────────────────────────────── */
 .card {
-    background: white;
-    padding: 20px;
-    border-radius: 6px;
-    flex: 1;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-    font-weight: bold;
+    background-color: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-2xl);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+    transition: box-shadow 0.25s ease, transform 0.2s ease;
 }
 
+.card:hover {
+    box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+    transform: translateY(-2px);
+}
+
+/* Better internal spacing for all card content */
+.card > div,
+.card > section,
+.card > .p-6,
+.card > .space-y-4,
+.card > .flex {
+    padding: 1.5rem 1.75rem;     /* ← increased horizontal padding */
+}
+
+/* Make sure first heading doesn't collapse margin */
+.card > :first-child:is(.section-title, .card-title, h1, h2, h3) {
+    margin-top: 0;
+    padding-top: 0.5rem;
+}
+
+/* Stat / KPI cards */
+.stat-card {
+    padding: 1.75rem 1.25rem;    /* ← a bit more generous */
+    text-align: center;
+}
+
+.stat-label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-light);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.5rem;
+    display: block;
+}
+
+.stat-value {
+    font-size: 2.5rem;
+    font-weight: 700;
+}
+
+/* Status badges */
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.375rem 0.875rem;
+    border-radius: 9999px;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    border: 1px solid;
+    white-space: nowrap;
+}
+
+.status-resolved   { background-color: #dcfce7; color: #166534; border-color: #86efac; }
+.status-inprogress { background-color: #dbeafe; color: #1e40af; border-color: #93c5fd; }
+.status-pending    { background-color: #fef3c7; color: #92400e; border-color: #fcd34d; }
+
+/* Buttons */
+.btn-primary {
+    background: linear-gradient(to right, var(--primary), #3b82f6);
+    color: white;
+    font-weight: 600;
+    padding: 0.75rem 1.5rem;
+    border-radius: var(--radius-lg);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    border: none;
+    cursor: pointer;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(to right, var(--primary-dark), #2563eb);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+}
+
+.btn-outline {
+    border: 2px solid var(--border);
+    color: var(--text-dark);
+    font-weight: 600;
+    padding: 0.75rem 1.5rem;
+    border-radius: var(--radius-lg);
+    background: white;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.btn-outline:hover {
+    background-color: #f3f4f6;
+}
+
+/* Quick category buttons (citizen) */
+.quick-btn {
+    background-color: #f3f4f6;
+    border: 1px solid var(--border);
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius-xl);
+    text-align: left;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    width: 100%;
+    cursor: pointer;
+}
+
+.quick-btn:hover {
+    background-color: #eff6ff;
+    color: var(--primary);
+    border-color: #bfdbfe;
+}
+
+/* Table styles (admin queue) ───────────────────────────────── */
+.table-container {
+    overflow-x: auto;
+    margin: 0 -1.75rem;          /* compensate for card padding */
+    padding: 0 1.75rem;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 720px;
+}
+
+thead th {
+    text-align: left;
+    padding: 0.85rem 1.25rem;    /* ← increased padding */
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-light);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    background-color: #f3f4f6;
+    border-bottom: 1px solid var(--border);
+}
+
+tbody tr {
+    transition: background-color 0.15s ease;
+}
+
+tbody tr:hover {
+    background-color: #f9fafb;
+}
+
+td {
+    padding: 1.1rem 1.25rem;     /* ← more horizontal breathing room */
+    vertical-align: middle;
+}
+
+/* Notification dot */
+.notif-dot {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    margin-top: 0.375rem;
+    flex-shrink: 0;
+}
+
+/* Map placeholder */
+.map-placeholder {
+    height: 20rem;
+    background-color: #e5e7eb;
+    border: 2px dashed #9ca3af;
+    border-radius: var(--radius-xl);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #6b7280;
+    font-weight: 500;
+    font-size: 1.125rem;
+    margin: 1rem 0;
+}
+
+/* Grid / flex helpers */
+.overview-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+}
+
+/* Safety net – prevent text hugging left edge in any direct child */
+.card > p,
+.card > div > p,
+.card > div > span:not(.status-badge) {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+}
