@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
     AlertTriangle,
@@ -12,20 +13,59 @@ import {
     Zap,
 } from "lucide-react";
 import "../../styles/dashboard.css";
+import { getDashboard } from "../../services/citizenService";
+
+const iconMap = {
+    "Infrastructure & Roads": { icon: AlertTriangle, iconClass: "cat-orange" },
+    "Water & Sanitation": { icon: Droplets, iconClass: "cat-blue" },
+    "Electricity & Energy": { icon: Zap, iconClass: "cat-yellow" },
+};
+
+const defaultIcon = { icon: AlertTriangle, iconClass: "cat-orange" };
 
 function CitizenDashboard() {
-    const complaintCategories = [
-        { name: "Infrastructure & Roads", count: 8, icon: AlertTriangle, iconClass: "cat-orange" },
-        { name: "Water & Sanitation", count: 4, icon: Droplets, iconClass: "cat-blue" },
-        { name: "Electricity & Energy", count: 3, icon: Zap, iconClass: "cat-yellow" },
-    ];
+    const [dashboard, setDashboard] = useState({
+        citizenName: "Citizen",
+        totalComplaints: 0,
+        resolvedThisMonth: 0,
+        unreadNotifications: 0,
+        categories: [],
+        recentComplaints: [],
+    });
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState("");
 
-    const recentComplaints = [
-        { id: "RUST-7841", title: "Large pothole on Nelson Mandela Dr", category: "Infrastructure", date: "Feb 20", status: "In Progress", icon: AlertTriangle, iconClass: "cat-orange" },
-        { id: "RUST-7832", title: "Burst pipe outside house", category: "Water", date: "Feb 18", status: "Resolved", icon: Droplets, iconClass: "cat-blue" },
-        { id: "RUST-7829", title: "Streetlight completely off", category: "Electricity", date: "Feb 15", status: "Pending", icon: Zap, iconClass: "cat-yellow" },
-        { id: "RUST-7825", title: "Traffic light out of order", category: "Infrastructure", date: "Feb 12", status: "Resolved", icon: AlertTriangle, iconClass: "cat-orange" },
-    ];
+    useEffect(() => {
+        const loadDashboard = async () => {
+            try {
+                const data = await getDashboard();
+                setDashboard({
+                    citizenName: data.citizenName || "Citizen",
+                    totalComplaints: data.totalComplaints || 0,
+                    resolvedThisMonth: data.resolvedThisMonth || 0,
+                    unreadNotifications: data.unreadNotifications || 0,
+                    categories: data.categories || [],
+                    recentComplaints: data.recentComplaints || [],
+                });
+            } catch (err) {
+                setError(err.response?.data?.error || "Unable to load dashboard");
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        loadDashboard();
+    }, []);
+
+    const complaintCategories = dashboard.categories.map((category) => ({
+        ...category,
+        ...(iconMap[category.name] || defaultIcon),
+    }));
+
+    const recentComplaints = dashboard.recentComplaints.map((complaint) => ({
+        ...complaint,
+        ...(iconMap[complaint.category] || defaultIcon),
+    }));
 
     return (
         <div className="citizen-v2-page">
@@ -38,14 +78,14 @@ function CitizenDashboard() {
                         />
                     </div>
                     <div>
-                        <h1>Welcome back, Citizen</h1>
+                        <h1>Welcome back, {dashboard.citizenName}</h1>
                         <p>Rustenburg Local Municipality Service Platform</p>
                     </div>
                 </div>
                 <div className="header-actions">
                     <button className="notif-btn" aria-label="Notifications">
                         <Bell size={18} />
-                        <span></span>
+                        {dashboard.unreadNotifications > 0 ? <span></span> : null}
                     </button>
                     <Link to="/citizen/submit" className="citizen-v2-primary-btn">
                         <Plus size={16} /> New Complaint
@@ -53,18 +93,22 @@ function CitizenDashboard() {
                 </div>
             </section>
 
+            {error ? <p className="subtitle">{error}</p> : null}
+
             <section className="citizen-v2-grid-two">
                 <article className="citizen-v2-card hero-card">
                     <p className="muted">Total Complaints <Eye size={14} /></p>
-                    <h2>15</h2>
-                    <small>Across 4 departments</small>
+                    <h2>{loading ? "..." : dashboard.totalComplaints}</h2>
+                    <small>Across {complaintCategories.length || 0} departments</small>
                 </article>
                 <article className="citizen-v2-card insight-card">
                     <p className="muted badge"><Sparkles size={16} /> Smart Insights</p>
                     <p className="insight-copy">
-                        11 complaints have been resolved this month. You're helping make Rustenburg a better place!
+                        {loading
+                            ? "Loading your latest stats."
+                            : `${dashboard.resolvedThisMonth} complaints have been resolved this month.`}
                     </p>
-                    <div className="insight-globe" aria-hidden="true">🌍</div>
+                    <div className="insight-globe" aria-hidden="true">Globe</div>
                 </article>
             </section>
 
@@ -88,6 +132,7 @@ function CitizenDashboard() {
                             <h3>Department Categories</h3>
                         </div>
                         <div className="category-list">
+                            {complaintCategories.length === 0 ? <p className="subtitle">No category data yet.</p> : null}
                             {complaintCategories.map((cat) => {
                                 const Icon = cat.icon;
                                 return (
@@ -110,6 +155,7 @@ function CitizenDashboard() {
                         <Link to="/citizen/my-complaints">See all</Link>
                     </div>
                     <div className="activity-list">
+                        {recentComplaints.length === 0 ? <p className="subtitle">No recent complaint activity yet.</p> : null}
                         {recentComplaints.map((complaint) => {
                             const Icon = complaint.icon;
                             return (
@@ -117,12 +163,12 @@ function CitizenDashboard() {
                                     <div className="activity-left">
                                         <div className={`cat-icon ${complaint.iconClass}`}><Icon size={18} /></div>
                                         <div>
-                                            <h4>{complaint.title}</h4>
+                                            <h4>{complaint.title || complaint.id}</h4>
                                             <p>{complaint.category}</p>
                                             <small>{complaint.date}</small>
                                         </div>
                                     </div>
-                                    <span className={`status ${complaint.status.toLowerCase().replace(" ", "-")}`}>
+                                    <span className={`status ${String(complaint.status || "").toLowerCase().replace(" ", "-")}`}>
                                         {complaint.status}
                                     </span>
                                 </div>

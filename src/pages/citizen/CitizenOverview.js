@@ -1,13 +1,45 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Plus } from "lucide-react";
 import "../../styles/dashboard.css";
+import { getOverview } from "../../services/citizenService";
 
 function CitizenOverview() {
+    const [overview, setOverview] = useState({
+        lifetimeSubmitted: 0,
+        resolved: 0,
+        open: 0,
+        avgResolutionDays: 0,
+        topCategories: [],
+        monthlyTrend: [],
+    });
+    const [error, setError] = useState("");
+
+    useEffect(() => {
+        const loadOverview = async () => {
+            try {
+                const data = await getOverview();
+                setOverview({
+                    lifetimeSubmitted: data.lifetimeSubmitted || 0,
+                    resolved: data.resolved || 0,
+                    open: data.open || 0,
+                    avgResolutionDays: data.avgResolutionDays || 0,
+                    topCategories: data.topCategories || [],
+                    monthlyTrend: data.monthlyTrend || [],
+                });
+            } catch (err) {
+                setError(err.response?.data?.error || "Unable to load overview");
+            }
+        };
+
+        loadOverview();
+    }, []);
+
     const stats = [
-        { label: "Lifetime Submitted", value: 38 },
-        { label: "Resolved", value: 31 },
-        { label: "Still Open", value: 7 },
-        { label: "Avg Resolution", value: "4.1 days" },
+        { label: "Lifetime Submitted", value: overview.lifetimeSubmitted },
+        { label: "Resolved", value: overview.resolved },
+        { label: "Still Open", value: overview.open },
+        { label: "Avg Resolution", value: `${overview.avgResolutionDays} days` },
     ];
 
     return (
@@ -19,6 +51,8 @@ function CitizenOverview() {
                 </div>
                 <Link to="/citizen/submit" className="citizen-v2-primary-btn"><Plus size={16} /> New Complaint</Link>
             </section>
+
+            {error ? <p className="subtitle">{error}</p> : null}
 
             <section className="overview-stat-grid">
                 {stats.map((stat) => (
@@ -32,12 +66,20 @@ function CitizenOverview() {
             <section className="overview-panels">
                 <article className="citizen-v2-card">
                     <div className="citizen-v2-card-head"><h3>Your Top Categories</h3></div>
-                    <div className="chart-placeholder">Roads 45% | Water 28% | Electricity 17% | Others 10%</div>
+                    <div className="chart-placeholder">
+                        {overview.topCategories.length === 0
+                            ? "No category trend data yet."
+                            : overview.topCategories.map((category) => `${category.name} ${category.count}`).join(" | ")}
+                    </div>
                 </article>
 
                 <article className="citizen-v2-card">
                     <div className="citizen-v2-card-head"><h3>Activity Trend (Last 6 Months)</h3></div>
-                    <div className="chart-placeholder">Submissions vs resolved trend chart area</div>
+                    <div className="chart-placeholder">
+                        {overview.monthlyTrend.length === 0
+                            ? "No monthly trend data yet."
+                            : overview.monthlyTrend.map((item) => `${item.month} ${item.count}`).join(" | ")}
+                    </div>
                 </article>
 
                 <article className="citizen-v2-card">
