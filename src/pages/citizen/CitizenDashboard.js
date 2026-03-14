@@ -108,7 +108,7 @@ function CitizenDashboard() {
                             ? "Loading your latest stats."
                             : `${dashboard.resolvedThisMonth} complaints have been resolved this month.`}
                     </p>
-                    <div className="insight-globe" aria-hidden="true">Globe</div>
+                    <div className="insight-globe" aria-hidden="true">🌍</div>
                 </article>
             </section>
 
