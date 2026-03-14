@@ -1,4 +1,3 @@
-// SubmitComplaint.jsx
 import '../../styles/dashboard.css';
 import { useState } from 'react';
 
@@ -6,9 +5,35 @@ function SubmitComplaint() {
     const [category, setCategory] = useState('');
     const [location, setLocation] = useState('');
     const [description, setDescription] = useState('');
+    const [selectedFile, setSelectedFile] = useState(null);
+    const [previewUrl, setPreviewUrl] = useState(null);
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState(null);
     const [error, setError] = useState(null);
+
+    const handleFileChange = (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        // size check
+        if (file.size > 10 * 1024 * 1024) {
+            setError('File is too large (max 10 MB)');
+            return;
+        }
+
+        setSelectedFile(file);
+        setError(null);
+
+        // image preview
+        if (file.type.startsWith('image/')) {
+            const url = URL.createObjectURL(file);
+            setPreviewUrl(url);
+            // cleanup previous URL
+            return () => URL.revokeObjectURL(url);
+        } else {
+            setPreviewUrl(null);
+        }
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -16,8 +41,7 @@ function SubmitComplaint() {
         setMessage(null);
         setError(null);
 
-        const token = localStorage.getItem('access_token'); // ← fixed to match Login.js
-
+        const token = localStorage.getItem('access_token');
         if (!token) {
             setError('Please log in first');
             setLoading(false);
@@ -25,32 +49,50 @@ function SubmitComplaint() {
         }
 
         try {
+            const formData = new FormData();
+
+            // JSON part
+            const complaintData = { category, location, description };
+            formData.append('data', new Blob([JSON.stringify(complaintData)], {
+                type: 'application/json'
+            }));
+
+            // file part
+            if (selectedFile) {
+                formData.append('photo', selectedFile);
+            }
+
+            // optional: safe debug (never stringify formData or File)
+            // for (let [k, v] of formData.entries()) {
+            //   console.log(k, v instanceof Blob ? `${v.name || 'blob'} (${v.size || '?'} bytes)` : v);
+            // }
+
             const response = await fetch('http://localhost:8080/api/complaints', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`,
+                    'Authorization': `Bearer ${token}`
+                    // IMPORTANT: do NOT set Content-Type → browser adds boundary
                 },
-                body: JSON.stringify({
-                    category,
-                    location,
-                    description,
-                }),
+                body: formData
             });
 
             const data = await response.json();
 
             if (!response.ok) {
-                throw new Error(data.error || 'Failed to submit complaint');
+                throw new Error(data.error || data.message || 'Submission failed');
             }
 
-            setMessage(`Complaint submitted! Reference: ${data.referenceNumber}`);
-            // Optional: clear form
+            setMessage(`Complaint submitted! Reference: ${data.referenceNumber || '—'}`);
+
+            // reset
             setCategory('');
             setLocation('');
             setDescription('');
+            setSelectedFile(null);
+            setPreviewUrl(null);
         } catch (err) {
             setError(err.message || 'Something went wrong');
+            console.error(err);
         } finally {
             setLoading(false);
         }
@@ -60,17 +102,18 @@ function SubmitComplaint() {
         <div className="dashboard-container">
             <h1 className="dashboard-title">Submit a Complaint</h1>
             <p className="subtitle">Describe the issue – include photo and location if possible</p>
+
             <div className="card mt-8">
                 <div className="p-6 pt-8">
-                    {message && <p style={{ color: 'green', marginBottom: '1rem' }}>{message}</p>}
-                    {error && <p style={{ color: 'red', marginBottom: '1rem' }}>{error}</p>}
+                    {message && <p className="text-green-600 mb-4 font-medium">{message}</p>}
+                    {error   && <p className="text-red-600 mb-4">{error}</p>}
 
                     <form onSubmit={handleSubmit}>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
                             <div>
                                 <label className="block text-sm font-medium mb-2">Category</label>
                                 <select
-                                    className="w-full p-3 border border-[var(--border)] rounded-lg"
+                                    className="w-full p-3 border rounded-lg"
                                     value={category}
                                     onChange={(e) => setCategory(e.target.value)}
                                     required
@@ -85,49 +128,99 @@ function SubmitComplaint() {
                                     <option>Other</option>
                                 </select>
                             </div>
+
                             <div>
                                 <label className="block text-sm font-medium mb-2">Location</label>
                                 <input
                                     type="text"
                                     placeholder="Enter address or use current location"
-                                    className="w-full p-3 border border-[var(--border)] rounded-lg"
+                                    className="w-full p-3 border rounded-lg"
                                     value={location}
                                     onChange={(e) => setLocation(e.target.value)}
                                     required
                                 />
-                                <p className="text-xs text-[var(--text-light)] mt-2">
-                                    GPS location will be automatically captured if permitted
-                                </p>
                             </div>
                         </div>
 
-                        <div className="mt-6">
+                        <div className="mb-6">
                             <label className="block text-sm font-medium mb-2">Description</label>
                             <textarea
-                                rows="5"
+                                rows={5}
                                 placeholder="Please describe the issue in detail..."
-                                className="w-full p-3 border border-[var(--border)] rounded-lg resize-y"
+                                className="w-full p-3 border rounded-lg resize-y"
                                 value={description}
                                 onChange={(e) => setDescription(e.target.value)}
                                 required
-                            ></textarea>
+                            />
                         </div>
 
-                        <div className="mt-6">
-                            <label className="block text-sm font-medium mb-2">Attach Photo/Video (optional)</label>
-                            <div className="border-2 border-dashed border-[var(--border)] rounded-xl p-8 text-center">
-                                <p className="text-[var(--text-medium)]">Click or drag files here</p>
-                                <p className="text-xs text-[var(--text-light)] mt-2">Supported: JPG, PNG, MP4 (max 10MB)</p>
+                        {/* ── FIXED FILE UPLOAD AREA ── */}
+                        <div className="mb-8">
+                            <label className="block text-sm font-medium mb-2">
+                                Attach Photo or Video (optional – max 10 MB)
+                            </label>
+
+                            <div
+                                className={`border-2 border-dashed rounded-xl p-10 text-center cursor-pointer transition
+                  ${previewUrl ? 'border-green-400 bg-green-50/40' : 'border-gray-300 hover:border-blue-400 hover:bg-blue-50/30'}`}
+                                onClick={() => document.getElementById('complaint-file-input')?.click()}
+                            >
+                                <input
+                                    id="complaint-file-input"
+                                    type="file"
+                                    accept="image/jpeg,image/png,image/gif,video/mp4,video/quicktime"
+                                    onChange={handleFileChange}
+                                    className="hidden"
+                                />
+
+                                {!selectedFile ? (
+                                    <div>
+                                        <p className="text-gray-700 font-medium mb-1">Click here or drag & drop</p>
+                                        <p className="text-sm text-gray-500">JPG, PNG, GIF, MP4 • max 10 MB</p>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-3">
+                                        <p className="text-green-700 font-medium break-all">{selectedFile.name}</p>
+                                        <p className="text-sm text-gray-500">
+                                            {(selectedFile.size / 1048576).toFixed(2)} MB
+                                        </p>
+                                        {previewUrl && (
+                                            <img
+                                                src={previewUrl}
+                                                alt="Preview"
+                                                className="max-h-48 mx-auto rounded-lg shadow-sm object-contain"
+                                            />
+                                        )}
+                                    </div>
+                                )}
                             </div>
+
+                            {selectedFile && (
+                                <div className="mt-3 text-center">
+                                    <button
+                                        type="button"
+                                        className="text-sm text-blue-600 hover:text-blue-800 underline"
+                                        onClick={() => {
+                                            setSelectedFile(null);
+                                            setPreviewUrl(null);
+                                            const input = document.getElementById('complaint-file-input');
+                                            if (input) input.value = '';
+                                        }}
+                                    >
+                                        Remove / Change file
+                                    </button>
+                                </div>
+                            )}
                         </div>
 
-                        <div className="mt-10 flex justify-end">
+                        <div className="flex justify-end">
                             <button
                                 type="submit"
-                                className="btn-primary px-8 py-3"
                                 disabled={loading}
+                                className={`px-8 py-3 rounded-lg font-medium text-white
+                  ${loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
                             >
-                                {loading ? 'Submitting...' : 'Submit Complaint'}
+                                {loading ? 'Submitting…' : 'Submit Complaint'}
                             </button>
                         </div>
                     </form>
