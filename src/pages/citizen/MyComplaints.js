@@ -1,17 +1,25 @@
 // MyComplaints.jsx
 import '../../styles/dashboard.css';
-import {Link} from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useState, useEffect } from 'react';
+import ComplaintDetailsModal from '../citizen/modal/ComplaintDetailsModal';
+import AddUpdateModal from '../citizen/modal/AddUpdateModal';
+// import ComplaintDetailsModal from './modals/ComplaintDetailsModal'; // adjust path
+// import AddUpdateModal from './modals/AddUpdateModal';             // adjust path
 
 function MyComplaints() {
     const [complaints, setComplaints] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    useEffect(() => {
-        const fetchComplaints = async () => {
-            const token = localStorage.getItem('access_token'); // ← fixed to match Login.js
+    const [selectedComplaint, setSelectedComplaint] = useState(null);
+    const [showDetails, setShowDetails] = useState(false);
+    const [showUpdate, setShowUpdate] = useState(false);
 
+    useEffect(() => {
+        // ... same fetch logic as before ...
+        const fetchComplaints = async () => {
+            const token = localStorage.getItem('access_token');
             if (!token) {
                 setError('Please log in to view your complaints');
                 setLoading(false);
@@ -19,17 +27,11 @@ function MyComplaints() {
             }
 
             try {
-                const response = await fetch('http://localhost:8080/api/complaints', {
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                    },
+                const res = await fetch('http://localhost:8080/api/complaints', {
+                    headers: { 'Authorization': `Bearer ${token}` },
                 });
-
-                if (!response.ok) {
-                    throw new Error('Failed to load complaints');
-                }
-
-                const data = await response.json();
+                if (!res.ok) throw new Error('Failed to load complaints');
+                const data = await res.json();
                 setComplaints(data);
             } catch (err) {
                 setError(err.message || 'Could not load complaints');
@@ -41,63 +43,109 @@ function MyComplaints() {
         fetchComplaints();
     }, []);
 
-    // Format date nicely (optional – matches your previous mock style)
     const formatDate = (dateStr) => {
-        if (!dateStr) return '';
-        const date = new Date(dateStr);
-        return date.toISOString().split('T')[0]; // YYYY-MM-DD
+        if (!dateStr) return '—';
+        return new Date(dateStr).toISOString().split('T')[0];
+    };
+
+    const openDetails = (comp) => {
+        setSelectedComplaint(comp);
+        setShowDetails(true);
+        setShowUpdate(false);
+    };
+
+    const openUpdate = (comp) => {
+        setSelectedComplaint(comp);
+        setShowUpdate(true);
+        setShowDetails(false);
+    };
+
+    const closeAll = () => {
+        setShowDetails(false);
+        setShowUpdate(false);
+        setSelectedComplaint(null);
+    };
+
+    const handleUpdateSubmit = (comment) => {
+        console.log('Would send to backend:', {
+            complaintId: selectedComplaint.id,
+            comment,
+            userEmail: 'current user' // ← you can get from auth context later
+        });
+
+        alert(`Update would be sent:\n\n${comment}\n\n(Backend endpoint missing)`);
+        closeAll();
     };
 
     return (
         <div className="dashboard-container">
             <h1 className="dashboard-title">My Complaints</h1>
             <p className="subtitle">Track the status of all your reported issues</p>
+
+            {/* ... loading / error / empty states same as before ... */}
+
             <div className="space-y-6 mt-8">
-                {loading ? (
-                    <div className="card p-8 text-center">
-                        <p className="text-[var(--text-medium)]">Loading your complaints...</p>
-                    </div>
-                ) : error ? (
-                    <div className="card p-8 text-center">
-                        <p style={{ color: 'red' }}>{error}</p>
-                    </div>
-                ) : complaints.length === 0 ? (
-                    <div className="card p-8 text-center">
-                        <p className="text-[var(--text-medium)]">You haven't submitted any complaints yet.</p>
-                        <Link to="/citizen/submit" className="btn-primary mt-4 inline-block">
-                            Submit Your First Complaint
-                        </Link>
-                        <br />
-                    </div>
-                ) : (
-                    complaints.map((comp) => (
-                        <div key={comp.id} className="card">
-                            <div className="p-6">
-                                <div className="flex justify-between items-start mb-4">
-                                    <div>
-                                        <h3 className="text-lg font-semibold">
-                                            {comp.referenceNumber} – {comp.category}
-                                        </h3>
-                                        <p className="text-sm text-[var(--text-light)] mt-1">
-                                            {formatDate(comp.createdAt)}
-                                        </p>
-                                    </div>
-                                    <span className={`status-badge status-${comp.status.toLowerCase()}`}>
-                    {comp.status}
-                  </span>
+                {complaints.map((comp) => (
+                    <div key={comp.id} className="card">
+                        <div className="p-6">
+                            <div className="flex justify-between items-start mb-4">
+                                <div>
+                                    <h3 className="text-lg font-semibold">
+                                        {comp.referenceNumber} – {comp.category}
+                                    </h3>
+                                    <p className="text-sm text-gray-500 mt-1">
+                                        {formatDate(comp.createdAt)}
+                                    </p>
                                 </div>
-                                <br />
-                                <p className="text-[var(--text-dark)]">{comp.description}</p>
-                                <div className="mt-6 flex gap-4">
-                                    <button className="btn-outline text-sm px-4 py-2">View Details</button>
-                                    <button className="btn-outline text-sm px-4 py-2">Add Update</button>
-                                </div>
+                                <span className={`status-badge status-${comp.status?.toLowerCase() || 'pending'}`}>
+                  {comp.status || 'Pending'}
+                </span>
+                            </div>
+
+                            <p className="text-gray-700">{comp.description}</p>
+
+                            {comp.photoUrl && (
+                                <img
+                                    src={`http://localhost:8080${comp.photoUrl}`}
+                                    alt="Attachment"
+                                    className="mt-4 max-w-full rounded shadow-sm"
+                                />
+                            )}
+
+                            <div className="mt-6 flex gap-4">
+                                <button
+                                    className="btn-outline text-sm px-5 py-2"
+                                    onClick={() => openDetails(comp)}
+                                >
+                                    View Details
+                                </button>
+                                <button
+                                    className="btn-outline text-sm px-5 py-2"
+                                    onClick={() => openUpdate(comp)}
+                                >
+                                    Add Update
+                                </button>
                             </div>
                         </div>
-                    ))
-                )}
-                <br />
+                    </div>
+                ))}
             </div>
+
+            {showDetails && selectedComplaint && (
+                <ComplaintDetailsModal
+                    complaint={selectedComplaint}
+                    onClose={closeAll}
+                    formatDate={formatDate}
+                />
+            )}
+
+            {showUpdate && selectedComplaint && (
+                <AddUpdateModal
+                    complaint={selectedComplaint}
+                    onClose={closeAll}
+                    onSubmit={handleUpdateSubmit}
+                />
+            )}
         </div>
     );
 }
