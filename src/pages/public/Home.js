@@ -1,17 +1,17 @@
-import { useEffect } from "react";
-import api from "../../api/api";
+// import { useEffect } from "react";
+// import api from "../../api/api";
 
 function Home() {
 
-    useEffect(() => {
-        api.get("/api/test")
-            .then(res => {
-                console.log("Backend:", res.data.message);
-            })
-            .catch(err => {
-                console.error("Backend error:", err);
-            });
-    }, []);
+    // useEffect(() => {
+    //     api.get("/api/test")
+    //         .then(res => {
+    //             console.log("Backend:", res.data.message);
+    //         })
+    //         .catch(err => {
+    //             console.error("Backend error:", err);
+    //         });
+    // }, []);
 
     return (
         <>
