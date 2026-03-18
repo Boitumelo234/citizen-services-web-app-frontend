@@ -1,5 +1,5 @@
 import '../../styles/dashboard.css';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 function SubmitComplaint() {
     const [category, setCategory] = useState('');
@@ -11,28 +11,42 @@ function SubmitComplaint() {
     const [message, setMessage] = useState(null);
     const [error, setError] = useState(null);
 
+    useEffect(() => {
+        return () => {
+            if (previewUrl) URL.revokeObjectURL(previewUrl);
+        };
+    }, [previewUrl]);
+
     const handleFileChange = (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
 
-        // size check
         if (file.size > 10 * 1024 * 1024) {
             setError('File is too large (max 10 MB)');
+            e.target.value = '';
             return;
         }
 
         setSelectedFile(file);
         setError(null);
 
-        // image preview
         if (file.type.startsWith('image/')) {
+            if (previewUrl) URL.revokeObjectURL(previewUrl);
             const url = URL.createObjectURL(file);
             setPreviewUrl(url);
-            // cleanup previous URL
-            return () => URL.revokeObjectURL(url);
         } else {
             setPreviewUrl(null);
         }
+    };
+
+    const clearFile = () => {
+        if (previewUrl) {
+            URL.revokeObjectURL(previewUrl);
+            setPreviewUrl(null);
+        }
+        setSelectedFile(null);
+        const input = document.getElementById('complaint-file-input');
+        if (input) input.value = '';
     };
 
     const handleSubmit = async (e) => {
@@ -50,49 +64,41 @@ function SubmitComplaint() {
 
         try {
             const formData = new FormData();
-
-            // JSON part
             const complaintData = { category, location, description };
-            formData.append('data', new Blob([JSON.stringify(complaintData)], {
-                type: 'application/json'
-            }));
+            formData.append('data', new Blob([JSON.stringify(complaintData)], { type: 'application/json' }));
 
-            // file part
             if (selectedFile) {
                 formData.append('photo', selectedFile);
             }
 
-            // optional: safe debug (never stringify formData or File)
-            // for (let [k, v] of formData.entries()) {
-            //   console.log(k, v instanceof Blob ? `${v.name || 'blob'} (${v.size || '?'} bytes)` : v);
-            // }
-
             const response = await fetch('http://localhost:8080/api/complaints', {
                 method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${token}`
-                    // IMPORTANT: do NOT set Content-Type → browser adds boundary
+                    Authorization: `Bearer ${token}`,
                 },
-                body: formData
+                body: formData,
             });
 
-            const data = await response.json();
-
             if (!response.ok) {
-                throw new Error(data.error || data.message || 'Submission failed');
+                let errorData;
+                try {
+                    errorData = await response.json();
+                } catch {
+                    errorData = {};
+                }
+                throw new Error(errorData.error || errorData.message || `Server responded with status ${response.status}`);
             }
 
+            const data = await response.json();
             setMessage(`Complaint submitted! Reference: ${data.referenceNumber || '—'}`);
 
-            // reset
             setCategory('');
             setLocation('');
             setDescription('');
-            setSelectedFile(null);
-            setPreviewUrl(null);
+            clearFile();
         } catch (err) {
-            setError(err.message || 'Something went wrong');
-            console.error(err);
+            setError(err.message || 'Failed to submit complaint');
+            console.error('Submission error:', err);
         } finally {
             setLoading(false);
         }
@@ -106,18 +112,13 @@ function SubmitComplaint() {
             <div className="card mt-8">
                 <div className="p-6 pt-8">
                     {message && <p className="text-green-600 mb-4 font-medium">{message}</p>}
-                    {error   && <p className="text-red-600 mb-4">{error}</p>}
+                    {error && <p className="text-red-600 mb-4">{error}</p>}
 
                     <form onSubmit={handleSubmit}>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
                             <div>
                                 <label className="block text-sm font-medium mb-2">Category</label>
-                                <select
-                                    className="w-full p-3 border rounded-lg"
-                                    value={category}
-                                    onChange={(e) => setCategory(e.target.value)}
-                                    required
-                                >
+                                <select className="w-full p-3 border rounded-lg" value={category} onChange={(e) => setCategory(e.target.value)} required>
                                     <option value="">Select category</option>
                                     <option>Pothole / Road Damage</option>
                                     <option>Water Leak / Burst Pipe</option>
@@ -128,7 +129,6 @@ function SubmitComplaint() {
                                     <option>Other</option>
                                 </select>
                             </div>
-
                             <div>
                                 <label className="block text-sm font-medium mb-2">Location</label>
                                 <input
@@ -154,16 +154,15 @@ function SubmitComplaint() {
                             />
                         </div>
 
-                        {/* ── FIXED FILE UPLOAD AREA ── */}
                         <div className="mb-8">
                             <label className="block text-sm font-medium mb-2">
                                 Attach Photo or Video (optional – max 10 MB)
                             </label>
-
-                            <div
-                                className={`border-2 border-dashed rounded-xl p-10 text-center cursor-pointer transition
-                  ${previewUrl ? 'border-green-400 bg-green-50/40' : 'border-gray-300 hover:border-blue-400 hover:bg-blue-50/30'}`}
-                                onClick={() => document.getElementById('complaint-file-input')?.click()}
+                            <label
+                                htmlFor="complaint-file-input"
+                                className={`border-2 border-dashed rounded-xl p-10 text-center cursor-pointer transition block ${
+                                    previewUrl ? 'border-green-400 bg-green-50/40' : 'border-gray-300 hover:border-blue-400 hover:bg-blue-50/30'
+                                }`}
                             >
                                 <input
                                     id="complaint-file-input"
@@ -193,19 +192,14 @@ function SubmitComplaint() {
                                         )}
                                     </div>
                                 )}
-                            </div>
+                            </label>
 
                             {selectedFile && (
                                 <div className="mt-3 text-center">
                                     <button
                                         type="button"
                                         className="text-sm text-blue-600 hover:text-blue-800 underline"
-                                        onClick={() => {
-                                            setSelectedFile(null);
-                                            setPreviewUrl(null);
-                                            const input = document.getElementById('complaint-file-input');
-                                            if (input) input.value = '';
-                                        }}
+                                        onClick={clearFile}
                                     >
                                         Remove / Change file
                                     </button>
@@ -217,8 +211,9 @@ function SubmitComplaint() {
                             <button
                                 type="submit"
                                 disabled={loading}
-                                className={`px-8 py-3 rounded-lg font-medium text-white
-                  ${loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
+                                className={`px-8 py-3 rounded-lg font-medium text-white ${
+                                    loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
+                                }`}
                             >
                                 {loading ? 'Submitting…' : 'Submit Complaint'}
                             </button>
