@@ -1,98 +1,96 @@
-import { Link } from 'react-router-dom';
-import '../../styles/dashboard.css';
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { Plus } from "lucide-react";
+import "../../styles/dashboard.css";
+import { getOverview } from "../../services/citizenService";
 
 function CitizenOverview() {
-    // Mock – real data from API
-    const personalStats = {
-        lifetimeSubmitted: 38,
-        lifetimeResolved: 31,
-        lifetimePending: 7,
-        favoriteCategory: 'Roads & Infrastructure',
-        avgDaysToResolve: 4.1,
-        badges: ['Eco Warrior', 'Top Reporter Q4', 'Fast Responder']
-    };
+    const [overview, setOverview] = useState({
+        lifetimeSubmitted: 0,
+        resolved: 0,
+        open: 0,
+        avgResolutionDays: 0,
+        topCategories: [],
+        monthlyTrend: [],
+    });
+    const [error, setError] = useState("");
+
+    useEffect(() => {
+        const loadOverview = async () => {
+            try {
+                const data = await getOverview();
+                setOverview({
+                    lifetimeSubmitted: data.lifetimeSubmitted || 0,
+                    resolved: data.resolved || 0,
+                    open: data.open || 0,
+                    avgResolutionDays: data.avgResolutionDays || 0,
+                    topCategories: data.topCategories || [],
+                    monthlyTrend: data.monthlyTrend || [],
+                });
+            } catch (err) {
+                setError(err.response?.data?.error || "Unable to load overview");
+            }
+        };
+
+        loadOverview();
+    }, []);
+
+    const stats = [
+        { label: "Lifetime Submitted", value: overview.lifetimeSubmitted },
+        { label: "Resolved", value: overview.resolved },
+        { label: "Still Open", value: overview.open },
+        { label: "Avg Resolution", value: `${overview.avgResolutionDays} days` },
+    ];
 
     return (
-        <div className="dashboard-container">
-            <h1 className="dashboard-title">Your Overview</h1>
-            <p className="subtitle">Your contribution to a better Rustenburg</p>
+        <div className="citizen-v2-page">
+            <section className="citizen-v2-header enhanced">
+                <div>
+                    <h1>Overview</h1>
+                    <p>Your activity and impact across municipal services</p>
+                </div>
+                <Link to="/citizen/submit" className="citizen-v2-primary-btn"><Plus size={16} /> New Complaint</Link>
+            </section>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mt-8">
-                <div className="card stat-card">
-                    <p className="stat-label">Lifetime Submitted</p>
-                    <p className="stat-value" style={{ color: 'var(--primary)' }}>
-                        {personalStats.lifetimeSubmitted}
-                    </p>
-                </div>
-                <br />
-                <div className="card stat-card">
-                    <p className="stat-label">Resolved</p>
-                    <p className="stat-value" style={{ color: 'var(--success)' }}>
-                        {personalStats.lifetimeResolved}
-                    </p>
-                </div>
-                <br />
-                <div className="card stat-card">
-                    <p className="stat-label">Still Open</p>
-                    <p className="stat-value" style={{ color: 'var(--warning)' }}>
-                        {personalStats.lifetimePending}
-                    </p>
-                </div>
-                <br />
-                <div className="card stat-card">
-                    <p className="stat-label">Avg Resolution</p>
-                    <p className="stat-value" style={{ color: 'var(--info)' }}>
-                        {personalStats.avgDaysToResolve} days
-                    </p>
-                </div>
-            </div>
-<br />
-            <div className="card mt-10">
-                <div className="p-6 pt-8">
-                    <h3 className="section-title">Your Top Categories</h3>
-                    <div className="h-64 bg-gray-50 rounded-xl mt-6 flex items-center justify-center border border-dashed">
-                        <p className="text-[var(--text-light)]">
-                            Pie / Bar chart: Roads 45% • Water 28% • Electricity 17% • Others 10%
-                        </p>
+            {error ? <p className="subtitle">{error}</p> : null}
+
+            <section className="overview-stat-grid">
+                {stats.map((stat) => (
+                    <article key={stat.label} className="citizen-v2-card stat">
+                        <p>{stat.label}</p>
+                        <h3>{stat.value}</h3>
+                    </article>
+                ))}
+            </section>
+
+            <section className="overview-panels">
+                <article className="citizen-v2-card">
+                    <div className="citizen-v2-card-head"><h3>Your Top Categories</h3></div>
+                    <div className="chart-placeholder">
+                        {overview.topCategories.length === 0
+                            ? "No category trend data yet."
+                            : overview.topCategories.map((category) => `${category.name} ${category.count}`).join(" | ")}
                     </div>
-                </div>
-            </div>
-<br />
-            <div className="card mt-8">
-                <div className="p-6 pt-8">
-                    <h3 className="section-title">Activity Trend (Last 6 Months)</h3>
-                    <div className="h-64 bg-gray-50 rounded-xl mt-6 flex items-center justify-center border border-dashed">
-                        <p className="text-[var(--text-light)]">
-                            Line chart placeholder: submissions vs resolved over time
-                        </p>
+                </article>
+
+                <article className="citizen-v2-card">
+                    <div className="citizen-v2-card-head"><h3>Activity Trend (Last 6 Months)</h3></div>
+                    <div className="chart-placeholder">
+                        {overview.monthlyTrend.length === 0
+                            ? "No monthly trend data yet."
+                            : overview.monthlyTrend.map((item) => `${item.month} ${item.count}`).join(" | ")}
                     </div>
-                </div>
-            </div>
-<br />
-            <div className="card mt-8">
-                <div className="p-6 pt-8">
-                    <h3 className="section-title">Your Badges & Achievements</h3>
-                    <div className="flex flex-wrap gap-3 mt-6">
-                        {personalStats.badges.map((badge, i) => (
-                            <div
-                                key={i}
-                                className="inline-flex items-center px-4 py-2 bg-amber-100 text-amber-800 rounded-full text-sm font-medium border border-amber-200"
-                            >
-                                🏆 {badge}
-                            </div>
-                        ))}
+                </article>
+
+                <article className="citizen-v2-card">
+                    <div className="citizen-v2-card-head"><h3>Badges & Achievements</h3></div>
+                    <div className="badge-row">
+                        <span>Eco Warrior</span>
+                        <span>Top Reporter Q4</span>
+                        <span>Fast Responder</span>
                     </div>
-                </div>
-            </div>
-<br />
-            <div className="flex flex-col sm:flex-row gap-4 mt-10">
-                <Link to="/citizen/my-complaints" className="btn-primary flex-1 text-center">
-                    View All My Complaints
-                </Link>
-                <Link to="/citizen/submit" className="btn-outline flex-1 text-center">
-                    Submit New Issue
-                </Link>
-            </div>
+                </article>
+            </section>
         </div>
     );
 }
