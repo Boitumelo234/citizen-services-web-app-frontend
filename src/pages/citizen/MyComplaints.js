@@ -1,3 +1,4 @@
+// MyComplaints.jsx
 import '../../styles/dashboard.css';
 import { Link } from "react-router-dom";
 import { useState, useEffect, useCallback } from 'react';
@@ -11,7 +12,7 @@ function MyComplaints() {
     const [selectedComplaint, setSelectedComplaint] = useState(null);
     const [showDetails, setShowDetails] = useState(false);
     const [showUpdate, setShowUpdate] = useState(false);
-    // const [loadedImages, setLoadedImages] = useState({});
+    const [imageErrors, setImageErrors] = useState({});
 
     const fetchComplaints = useCallback(async () => {
         const token = localStorage.getItem('access_token');
@@ -42,7 +43,13 @@ function MyComplaints() {
 
     const formatDate = (dateStr) => {
         if (!dateStr) return '—';
-        return new Date(dateStr).toISOString().split('T')[0];
+        return new Date(dateStr).toLocaleDateString('en-ZA', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
     };
 
     const getImageUrl = (photoUrl) => {
@@ -53,27 +60,22 @@ function MyComplaints() {
             return photoUrl;
         }
 
-        // Extract just the filename
-        let fileName = photoUrl;
+        // Extract just the filename from the path
+        let filename = photoUrl;
+        if (photoUrl.includes('/')) {
+            filename = photoUrl.split('/').pop();
+        }
         if (photoUrl.includes('\\')) {
-            fileName = photoUrl.split('\\').pop();
-        } else if (photoUrl.includes('/')) {
-            fileName = photoUrl.split('/').pop();
+            filename = photoUrl.split('\\').pop();
         }
 
-        // Return a clean URL
-        return `http://localhost:8080/uploads/${fileName}`;
+        // Try both endpoints - first try the API endpoint which bypasses security
+        return `http://localhost:8080/api/files/${filename}`;
     };
 
-    // const handleImageLoad = (complaintId) => {
-    //     setLoadedImages(prev => ({ ...prev, [complaintId]: true }));
-    // };
-
-    // const handleImageError = (e, complaintId) => {
-    //     console.log('Image failed to load:', e.target.src);
-    //     e.target.style.display = 'none';
-    //     setLoadedImages(prev => ({ ...prev, [complaintId]: false }));
-    // };
+    const handleImageError = (complaintId, imageType = 'main') => {
+        setImageErrors(prev => ({ ...prev, [`${complaintId}-${imageType}`]: true }));
+    };
 
     const openDetails = (comp) => {
         setSelectedComplaint(comp);
@@ -120,74 +122,70 @@ function MyComplaints() {
             )}
 
             {!loading && !error && complaints.length > 0 && (
-
                 <div className="space-y-6 mt-8">
-                    {complaints.map((comp) => (
-                        <div key={comp.id} className="card">
-                            <div className="p-6">
-                                <div className="flex justify-between items-start mb-4">
-                                    <div>
-                                        <h3 className="text-lg font-semibold">
-                                            {comp.referenceNumber} – {comp.category}
-                                        </h3>
-                                        <p className="text-sm text-gray-500 mt-1">
-                                            {formatDate(comp.createdAt)}
-                                        </p>
+                    {complaints.map((comp) => {
+                        const imageUrl = getImageUrl(comp.photoUrl);
+                        const hasImageError = imageErrors[`${comp.id}-main`];
+
+                        return (
+                            <div key={comp.id} className="card">
+                                <div className="p-6">
+                                    <div className="flex justify-between items-start mb-4">
+                                        <div>
+                                            <h3 className="text-lg font-semibold">
+                                                {comp.referenceNumber} – {comp.category}
+                                            </h3>
+                                            <p className="text-sm text-gray-500 mt-1">
+                                                {formatDate(comp.createdAt)}
+                                            </p>
+                                        </div>
+                                        <span className={`status-badge status-${comp.status?.toLowerCase() || 'pending'}`}>
+                                            {comp.status || 'Pending'}
+                                        </span>
                                     </div>
-                                    <span className={`status-badge status-${comp.status?.toLowerCase() || 'pending'}`}>
-                                        {comp.status || 'Pending'}
-                                    </span>
-                                </div>
 
-                                <p className="text-gray-700 mb-4">{comp.description}</p>
+                                    <p className="text-gray-700 mb-4">{comp.description}</p>
 
-                                {/* Image section with fixed height to prevent layout shift */}
-                                {/*{comp.photoUrl && (*/}
-                                {/*    <div className="mb-4 border border-gray-200 rounded-lg p-2 bg-gray-50" style={{ minHeight: '150px' }}>*/}
-                                {/*        {!loadedImages[comp.id] && (*/}
-                                {/*            <div className="flex items-center justify-center h-32 bg-gray-100 rounded">*/}
-                                {/*                <p className="text-gray-400">Loading image...</p>*/}
-                                {/*            </div>*/}
-                                {/*        )}*/}
-                                {/*        <img*/}
-                                {/*            src={getImageUrl(comp.photoUrl)}*/}
-                                {/*            alt="Complaint attachment"*/}
-                                {/*            className={`max-w-full h-auto rounded shadow-sm object-contain mx-auto transition-opacity duration-300 ${*/}
-                                {/*                loadedImages[comp.id] ? 'opacity-100' : 'opacity-0'*/}
-                                {/*            }`}*/}
-                                {/*            style={{ maxHeight: '200px' }}*/}
-                                {/*            onLoad={() => handleImageLoad(comp.id)}*/}
-                                {/*            onError={(e) => handleImageError(e, comp.id)}*/}
-                                {/*        />*/}
-                                {/*    </div>*/}
-                                {/*)}*/}
+                                    {/* Image section */}
+                                    {comp.photoUrl && !hasImageError && (
+                                        <div className="mb-4 border border-gray-200 rounded-lg p-2 bg-gray-50">
+                                            <img
+                                                src={imageUrl}
+                                                alt="Complaint attachment"
+                                                className="max-w-full h-auto rounded shadow-sm object-contain mx-auto"
+                                                style={{ maxHeight: '200px' }}
+                                                onError={() => handleImageError(comp.id, 'main')}
+                                            />
+                                        </div>
+                                    )}
 
-                                {/* Buttons - always visible */}
-                                <div className="flex gap-4 mt-4 pt-2 border-t border-gray-100">
-                                    <button
-                                        className="btn-outline text-sm px-5 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg transition-colors"
-                                        onClick={(e) => {
-                                            e.preventDefault();
-                                            e.stopPropagation();
-                                            openDetails(comp);
-                                        }}
-                                    >
-                                        View Details
-                                    </button>
-                                    <button
-                                        className="btn-outline text-sm px-5 py-2 bg-green-50 hover:bg-green-100 text-green-700 rounded-lg transition-colors"
-                                        onClick={(e) => {
-                                            e.preventDefault();
-                                            e.stopPropagation();
-                                            openUpdate(comp);
-                                        }}
-                                    >
-                                        Add Update
-                                    </button>
+                                    {/* Buttons */}
+                                    <div className="flex gap-4 mt-4 pt-2 border-t border-gray-100">
+                                        <button
+                                            className="btn-outline text-sm px-5 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg transition-colors"
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                openDetails(comp);
+                                            }}
+                                        >
+                                            View Details
+                                        </button>
+                                        <button
+                                            className="btn-outline text-sm px-5 py-2 bg-green-50 hover:bg-green-100 text-green-700 rounded-lg transition-colors"
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                openUpdate(comp);
+                                            }}
+                                        >
+                                            Add Update
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             )}
 
@@ -206,6 +204,7 @@ function MyComplaints() {
                     complaint={selectedComplaint}
                     onClose={closeAll}
                     onSuccess={fetchComplaints}
+                    getImageUrl={getImageUrl}
                 />
             )}
         </div>
