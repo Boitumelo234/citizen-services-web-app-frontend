@@ -1,16 +1,9 @@
-// GOOD version - recommended
-import React from 'react';
-
-const Button = ({ text, type = 'button', disabled = false, ...props }) => {
+function Button({ text, onClick, type = "button" }) {
     return (
-        <button
-            type={type}               // ← crucial: allows "submit"
-            disabled={disabled}
-            {...props}
-        >
+        <button type={type} onClick={onClick} className="btn">
             {text}
         </button>
     );
-};
+}
 
 export default Button;

@@ -2,9 +2,9 @@ import Sidebar from "./Sidebar";
 
 function CitizenLayout({ children }) {
     return (
-        <div className="dashboard citizen-v2-layout">
+        <div className="dashboard">
             <Sidebar role="citizen" />
-            <div className="dashboard-content citizen-v2-content">{children}</div>
+            <div className="dashboard-content">{children}</div>
         </div>
     );
 }
