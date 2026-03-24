@@ -477,3 +477,27 @@ td {
     }
 }
 
+/* Make sure the map container has proper dimensions */
+.leaflet-container {
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+}
+
+/* Fix for marker icons */
+.leaflet-marker-icon {
+    background: transparent;
+    border: none;
+}
+
+/* Custom marker styling */
+.custom-div-icon {
+    background: transparent;
+    border: none;
+}
+
+/* Ensure modal appears above map */
+.modal-overlay {
+    z-index: 1000;
+}
+
