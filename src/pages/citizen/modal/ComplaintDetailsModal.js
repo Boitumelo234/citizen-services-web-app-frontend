@@ -1,8 +1,9 @@
+// ComplaintDetailsModal.jsx
 import { useEffect, useState } from 'react';
 
 function ComplaintDetailsModal({ complaint, onClose, formatDate, getImageUrl }) {
     const [imageLoaded, setImageLoaded] = useState(false);
-    const [imageError, setImageError] = useState(false);
+    const [updateImagesLoaded, setUpdateImagesLoaded] = useState({});
 
     useEffect(() => {
         // Prevent body scrolling when modal is open
@@ -24,15 +25,26 @@ function ComplaintDetailsModal({ complaint, onClose, formatDate, getImageUrl }) 
 
     const handleImageLoad = () => {
         setImageLoaded(true);
-        setImageError(false);
+    };
+
+    const handleUpdateImageLoad = (updateId) => {
+        setUpdateImagesLoaded(prev => ({ ...prev, [updateId]: true }));
     };
 
     const handleImageError = (e) => {
         console.log('Image failed to load in modal');
-        setImageError(true);
-        setImageLoaded(false);
-        e.target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='200' viewBox='0 0 400 200'%3E%3Crect width='400' height='200' fill='%23f3f4f6'/%3E%3Ctext x='100' y='110' font-family='Arial' font-size='14' fill='%239ca3af'%3EImage not available%3C/text%3E%3C/svg%3E";
+        e.target.style.display = 'none';
+        // Show a fallback div
+        const parent = e.target.parentElement;
+        if (parent && !parent.querySelector('.image-fallback')) {
+            const fallback = document.createElement('div');
+            fallback.className = 'image-fallback flex items-center justify-center h-48 bg-gray-100 rounded';
+            fallback.innerHTML = '<p class="text-gray-400">Image not available</p>';
+            parent.appendChild(fallback);
+        }
     };
+
+    const mainImageUrl = complaint.photoUrl ? getImageUrl(complaint.photoUrl) : null;
 
     return (
         <div
@@ -40,31 +52,26 @@ function ComplaintDetailsModal({ complaint, onClose, formatDate, getImageUrl }) 
             onClick={handleBackdropClick}
             style={{ backdropFilter: 'blur(4px)' }}
         >
-            {/*<div*/}
-            {/*    className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl flex flex-col"*/}
-            {/*    onClick={(e) => e.stopPropagation()}*/}
-            {/*    style={{ maxHeight: '85vh' }}*/}
-            {/*>*/}
             <div
                 className="card overflow-y-auto flex-1"
                 onClick={(e) => e.stopPropagation()}
                 style={{ maxHeight: '95vh' }}
             >
-                {/* Header - sticky */}
+                {/* Header */}
                 <div className="sticky top-0 bg-white z-10 px-6 py-4 border-b flex justify-between items-center rounded-t-2xl">
                     <h2 className="text-xl font-bold text-gray-900 truncate pr-4">
                         Complaint {complaint.referenceNumber}
                     </h2>
-                    {/*<button*/}
-                    {/*    onClick={onClose}*/}
-                    {/*    className="text-gray-500 hover:text-gray-800 text-3xl font-light leading-none focus:outline-none w-8 h-8 flex items-center justify-center hover:bg-gray-100 rounded-full flex-shrink-0"*/}
-                    {/*    title="Close"*/}
-                    {/*>*/}
-                    {/*    ×*/}
-                    {/*</button>*/}
+                    <button
+                        onClick={onClose}
+                        className="text-gray-500 hover:text-gray-800 text-3xl font-light leading-none focus:outline-none w-8 h-8 flex items-center justify-center hover:bg-gray-100 rounded-full flex-shrink-0"
+                        title="Close"
+                    >
+                        ×
+                    </button>
                 </div>
 
-                {/* Scrollable Content - takes remaining space */}
+                {/* Scrollable Content */}
                 <div className="overflow-y-auto flex-1 p-6">
                     <div className="space-y-6">
                         {/* Key info grid */}
@@ -104,23 +111,26 @@ function ComplaintDetailsModal({ complaint, onClose, formatDate, getImageUrl }) 
                             </div>
                         </div>
 
-                        {/* Original Photo - with max height constraint */}
-                        {complaint.photoUrl && (
+                        {/* Original Photo */}
+                        {mainImageUrl && (
                             <div>
                                 <p className="text-sm text-gray-500 font-medium mb-2">Attached Photo</p>
-                                <div className="rounded-lg overflow-hidden shadow-sm border border-gray-200 bg-gray-50 p-2">
-                                    {!imageLoaded && !imageError && (
-                                        <div className="flex items-center justify-center h-32 bg-gray-100 rounded">
-                                            <p className="text-gray-400">Loading image...</p>
+                                <div className="rounded-lg overflow-hidden shadow-sm border border-gray-200 bg-gray-50 p-4">
+                                    {!imageLoaded && (
+                                        <div className="flex items-center justify-center h-48 bg-gray-100 rounded">
+                                            <div className="text-center">
+                                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                                                <p className="text-gray-400 text-sm">Loading image...</p>
+                                            </div>
                                         </div>
                                     )}
                                     <img
-                                        src={getImageUrl(complaint.photoUrl)}
+                                        src={mainImageUrl}
                                         alt="Complaint attachment"
                                         className={`w-full object-contain mx-auto transition-opacity duration-300 ${
                                             imageLoaded ? 'opacity-100' : 'opacity-0'
                                         }`}
-                                        style={{ maxHeight: '250px' }}
+                                        style={{ maxHeight: '400px' }}
                                         onLoad={handleImageLoad}
                                         onError={handleImageError}
                                     />
@@ -140,52 +150,63 @@ function ComplaintDetailsModal({ complaint, onClose, formatDate, getImageUrl }) 
                             </h3>
                             {complaint.updates?.length > 0 ? (
                                 <div className="space-y-4">
-                                    {complaint.updates.map((update, index) => (
-                                        <div
-                                            key={update.id}
-                                            className="bg-gray-50 border border-gray-200 rounded-lg p-4 shadow-sm"
-                                        >
-                                            <div className="flex justify-between items-center mb-3">
-                                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                                    Update #{index + 1}
-                                                </span>
-                                                <span className="text-xs text-gray-500">
-                                                    {formatDate(update.createdAt)}
-                                                </span>
-                                            </div>
+                                    {complaint.updates.map((update, index) => {
+                                        const updateImageUrl = update.photoUrl ? getImageUrl(update.photoUrl) : null;
+                                        const isUpdateImageLoaded = updateImagesLoaded[update.id];
 
-                                            {update.newLocation && (
-                                                <div className="mb-3 bg-white p-2 rounded border border-gray-100">
-                                                    <p className="text-xs text-gray-500 mb-1">📍 Updated location</p>
-                                                    <p className="font-medium text-gray-800 break-words">{update.newLocation}</p>
+                                        return (
+                                            <div
+                                                key={update.id}
+                                                className="bg-gray-50 border border-gray-200 rounded-lg p-4 shadow-sm"
+                                            >
+                                                <div className="flex justify-between items-center mb-3">
+                                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                                        Update #{index + 1}
+                                                    </span>
+                                                    <span className="text-xs text-gray-500">
+                                                        {formatDate(update.createdAt)}
+                                                    </span>
                                                 </div>
-                                            )}
 
-                                            <div className="mb-3">
-                                                <p className="text-xs text-gray-500 mb-1">💬 Comment</p>
-                                                <p className="text-gray-700 whitespace-pre-wrap break-words bg-white p-3 rounded border border-gray-100">
-                                                    {update.comment}
-                                                </p>
-                                            </div>
-
-                                            {update.photoUrl && (
-                                                <div>
-                                                    <p className="text-xs text-gray-500 mb-2">📷 Additional photo</p>
-                                                    <div className="rounded-lg overflow-hidden shadow-sm border border-gray-200 bg-white p-2">
-                                                        <img
-                                                            src={getImageUrl(update.photoUrl)}
-                                                            alt="Update attachment"
-                                                            className="w-full object-contain mx-auto"
-                                                            style={{ maxHeight: '150px' }}
-                                                            onError={(e) => {
-                                                                e.target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='150' viewBox='0 0 200 150'%3E%3Crect width='200' height='150' fill='%23f3f4f6'/%3E%3Ctext x='40' y='80' font-family='Arial' font-size='12' fill='%239ca3af'%3EPhoto unavailable%3C/text%3E%3C/svg%3E";
-                                                            }}
-                                                        />
+                                                {update.newLocation && (
+                                                    <div className="mb-3 bg-white p-2 rounded border border-gray-100">
+                                                        <p className="text-xs text-gray-500 mb-1">📍 Updated location</p>
+                                                        <p className="font-medium text-gray-800 break-words">{update.newLocation}</p>
                                                     </div>
+                                                )}
+
+                                                <div className="mb-3">
+                                                    <p className="text-xs text-gray-500 mb-1">💬 Comment</p>
+                                                    <p className="text-gray-700 whitespace-pre-wrap break-words bg-white p-3 rounded border border-gray-100">
+                                                        {update.comment}
+                                                    </p>
                                                 </div>
-                                            )}
-                                        </div>
-                                    ))}
+
+                                                {updateImageUrl && (
+                                                    <div>
+                                                        <p className="text-xs text-gray-500 mb-2">📷 Additional photo</p>
+                                                        <div className="rounded-lg overflow-hidden shadow-sm border border-gray-200 bg-white p-2">
+                                                            {!isUpdateImageLoaded && (
+                                                                <div className="flex items-center justify-center h-32 bg-gray-100 rounded">
+                                                                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                                                                </div>
+                                                            )}
+                                                            <img
+                                                                src={updateImageUrl}
+                                                                alt="Update attachment"
+                                                                className={`w-full object-contain mx-auto transition-opacity duration-300 ${
+                                                                    isUpdateImageLoaded ? 'opacity-100' : 'opacity-0'
+                                                                }`}
+                                                                style={{ maxHeight: '200px' }}
+                                                                onLoad={() => handleUpdateImageLoad(update.id)}
+                                                                onError={handleImageError}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             ) : (
                                 <div className="text-center py-8 bg-gray-50 rounded-lg border border-dashed border-gray-300">
@@ -198,7 +219,7 @@ function ComplaintDetailsModal({ complaint, onClose, formatDate, getImageUrl }) 
                     </div>
                 </div>
 
-                {/* Footer with buttons - sticky at bottom */}
+                {/* Footer */}
                 <div className="sticky bottom-0 bg-white px-6 py-4 border-t flex justify-end gap-3 rounded-b-2xl">
                     <button
                         onClick={onClose}
