@@ -1,155 +1,189 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import '../../styles/dashboard.css';
+import {
+    AlertTriangle,
+    Bell,
+    Droplets,
+    Eye,
+    Map as MapIcon,
+    Navigation,
+    Plus,
+    Search,
+    Sparkles,
+    Zap,
+} from "lucide-react";
+import "../../styles/dashboard.css";
+import { getDashboard } from "../../services/citizenService";
+
+const iconMap = {
+    "Infrastructure & Roads": { icon: AlertTriangle, iconClass: "cat-orange" },
+    "Water & Sanitation": { icon: Droplets, iconClass: "cat-blue" },
+    "Electricity & Energy": { icon: Zap, iconClass: "cat-yellow" },
+};
+
+const defaultIcon = { icon: AlertTriangle, iconClass: "cat-orange" };
 
 function CitizenDashboard() {
-    const [notifications] = useState([
-        { id: 1, message: "Your pothole report #RUST-7841 is now In Progress", time: "2h ago", type: "success" },
-        { id: 2, message: "Roads department assigned technician to your water leak", time: "Yesterday", type: "info" },
-    ]);
+    const [dashboard, setDashboard] = useState({
+        citizenName: "Citizen",
+        totalComplaints: 0,
+        resolvedThisMonth: 0,
+        unreadNotifications: 0,
+        categories: [],
+        recentComplaints: [],
+    });
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState("");
 
-    const myComplaints = [
-        { id: "RUST-7841", date: "2026-02-20", category: "Infrastructure & Roads", desc: "Large pothole on Nelson Mandela Drive", status: "In Progress" },
-        { id: "RUST-7832", date: "2026-02-18", category: "Water & Sanitation", desc: "Burst pipe outside house", status: "Resolved" },
-        { id: "RUST-7829", date: "2026-02-15", category: "Electricity & Energy", desc: "Streetlight not working", status: "Pending" },
-    ];
+    useEffect(() => {
+        const loadDashboard = async () => {
+            try {
+                const data = await getDashboard();
+                setDashboard({
+                    citizenName: data.citizenName || "Citizen",
+                    totalComplaints: data.totalComplaints || 0,
+                    resolvedThisMonth: data.resolvedThisMonth || 0,
+                    unreadNotifications: data.unreadNotifications || 0,
+                    categories: data.categories || [],
+                    recentComplaints: data.recentComplaints || [],
+                });
+            } catch (err) {
+                setError(err.response?.data?.error || "Unable to load dashboard");
+            } finally {
+                setLoading(false);
+            }
+        };
 
-    const quickCategories = [
-        "Pothole", "Water Leak", "Power Outage", "Illegal Dumping",
-        "Streetlight Fault", "Sewer Overflow", "Missed Refuse"
-    ];
+        loadDashboard();
+    }, []);
+
+    const complaintCategories = dashboard.categories.map((category) => ({
+        ...category,
+        ...(iconMap[category.name] || defaultIcon),
+    }));
+
+    const recentComplaints = dashboard.recentComplaints.map((complaint) => ({
+        ...complaint,
+        ...(iconMap[complaint.category] || defaultIcon),
+    }));
 
     return (
-        <div className="dashboard-root">
-            <div className="dashboard-container">
-                <div className="flex justify-between items-center mb-8">
-                    <div>
-                        <h1 className="dashboard-title">Welcome back, Citizen 👋</h1>
-                        <p className="subtitle">Rustenburg Local Municipality Citizen Services Platform</p>
+        <div className="citizen-v2-page">
+            <section className="citizen-v2-header enhanced">
+                <div className="welcome-block">
+                    <div className="avatar-shell">
+                        <img
+                            src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix&backgroundColor=e2e8f0"
+                            alt="Avatar"
+                        />
                     </div>
-                    <Link to="/citizen/submit" className="btn-primary flex items-center gap-2">
-                        + New Complaint
+                    <div>
+                        <h1>Welcome back, {dashboard.citizenName}</h1>
+                        <p>Rustenburg Local Municipality Service Platform</p>
+                    </div>
+                </div>
+                <div className="header-actions">
+                    <button className="notif-btn" aria-label="Notifications">
+                        <Bell size={18} />
+                        {dashboard.unreadNotifications > 0 ? <span></span> : null}
+                    </button>
+                    <Link to="/citizen/submit" className="citizen-v2-primary-btn">
+                        <Plus size={16} /> New Complaint
                     </Link>
                 </div>
-<br />
-                {/* KPI Stats */}
-                <div className="overview-cards">
-                    <div className="card stat-card">
-                        <p className="stat-label">Total Submitted</p>
-                        <p className="stat-value" style={{ color: "var(--primary)" }}>15</p>
-                    </div>
-                    <div className="card stat-card">
-                        <p className="stat-label">Pending</p>
-                        <p className="stat-value" style={{ color: "var(--warning)" }}>4</p>
-                    </div>
-                    <div className="card stat-card">
-                        <p className="stat-label">Resolved</p>
-                        <p className="stat-value" style={{ color: "var(--success)" }}>11</p>
-                    </div>
-                    <div className="card stat-card">
-                        <p className="stat-label">Avg Response</p>
-                        <p className="stat-value" style={{ color: "var(--info)" }}>2.8 days</p>
-                    </div>
-                </div>
-<br />
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    {/* My Recent Complaints */}
-                    <div className="card lg:col-span-2">
-                        <div className="p-6">
-                            <br />
-                            <div className="flex items-center justify-between mb-6">
-                                <h2 className="section-title">My Recent Complaints</h2>
-                                <Link to="/citizen/my-complaints" className="text-[var(--primary)] hover:underline">View all →</Link>
-                            </div>
-                            <div className="space-y-4">
-                                {myComplaints.map(comp => (
-                                    <div
-                                        key={comp.id}
-                                        className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition"
-                                    >
-                                        <div>
-                                            <div className="font-medium">{comp.id} — {comp.category}</div>
-                                            <div className="text-sm text-[var(--text-medium)] line-clamp-1">{comp.desc}</div>
-                                            <div className="text-xs text-[var(--text-light)] mt-1">{comp.date}</div>
+            </section>
+
+            {error ? <p className="subtitle">{error}</p> : null}
+
+            <section className="citizen-v2-grid-two">
+                <article className="citizen-v2-card hero-card">
+                    <p className="muted">Total Complaints <Eye size={14} /></p>
+                    <h2>{loading ? "..." : dashboard.totalComplaints}</h2>
+                    <small>Across {complaintCategories.length || 0} departments</small>
+                </article>
+                <article className="citizen-v2-card insight-card">
+                    <p className="muted badge"><Sparkles size={16} /> Smart Insights</p>
+                    <p className="insight-copy">
+                        {loading
+                            ? "Loading your latest stats."
+                            : `${dashboard.resolvedThisMonth} complaints have been resolved this month.`}
+                    </p>
+                    <div className="insight-globe" aria-hidden="true">🌍</div>
+                </article>
+            </section>
+
+            <section className="citizen-v2-main-grid">
+                <div className="left-col">
+                    <article className="citizen-v2-card">
+                        <div className="citizen-v2-card-head">
+                            <h3>Quick actions</h3>
+                            <button>See more</button>
+                        </div>
+                        <div className="quick-actions rich">
+                            <button><Search size={20} /> <span>Track</span></button>
+                            <button><Plus size={20} /> <span>New Fault</span></button>
+                            <button><Navigation size={20} /> <span>Map</span></button>
+                            <button><Sparkles size={20} /> <span>AI Assist</span></button>
+                        </div>
+                    </article>
+
+                    <article className="citizen-v2-card">
+                        <div className="citizen-v2-card-head">
+                            <h3>Department Categories</h3>
+                        </div>
+                        <div className="category-list">
+                            {complaintCategories.length === 0 ? <p className="subtitle">No category data yet.</p> : null}
+                            {complaintCategories.map((cat) => {
+                                const Icon = cat.icon;
+                                return (
+                                    <div key={cat.name} className="category-item">
+                                        <div className="category-left">
+                                            <div className={`cat-icon ${cat.iconClass}`}><Icon size={18} /></div>
+                                            <span>{cat.name}</span>
                                         </div>
-                                        <span className={`status-badge status-${comp.status.toLowerCase().replace(' ', '')}`}>
-                      {comp.status}
-                    </span>
+                                        <strong>{cat.count}</strong>
                                     </div>
-                                ))}
-                            </div>
+                                );
+                            })}
                         </div>
-                        <br />
+                    </article>
+                </div>
+
+                <article className="citizen-v2-card right-col">
+                    <div className="citizen-v2-card-head">
+                        <h3>Recent Activity</h3>
+                        <Link to="/citizen/my-complaints">See all</Link>
                     </div>
-<br />
-                    {/* Notifications + Quick Categories */}
-                    <div className="space-y-6">
-                        {/* Notifications */}
-                        <div className="card">
-                            <br />
-                            <div className="p-6">
-                                <h3 className="card-title">🛎️ Notifications</h3>
-                                <div className="space-y-3 text-sm mt-4">
-                                    {notifications.map(notif => (
-                                        <div key={notif.id} className="flex gap-3">
-                                            <div
-                                                className={`notif-dot ${notif.type === "success" ? "bg-[var(--success)]" : "bg-[var(--primary)]"}`}
-                                            />
-                                            <div>
-                                                <p className="text-[var(--text-dark)]">{notif.message}</p>
-                                                <p className="text-xs text-[var(--text-light)] mt-1">{notif.time}</p>
-                                            </div>
+                    <div className="activity-list">
+                        {recentComplaints.length === 0 ? <p className="subtitle">No recent complaint activity yet.</p> : null}
+                        {recentComplaints.map((complaint) => {
+                            const Icon = complaint.icon;
+                            return (
+                                <div key={complaint.id} className="activity-item">
+                                    <div className="activity-left">
+                                        <div className={`cat-icon ${complaint.iconClass}`}><Icon size={18} /></div>
+                                        <div>
+                                            <h4>{complaint.title || complaint.id}</h4>
+                                            <p>{complaint.category}</p>
+                                            <small>{complaint.date}</small>
                                         </div>
-                                    ))}
+                                    </div>
+                                    <span className={`status ${String(complaint.status || "").toLowerCase().replace(" ", "-")}`}>
+                                        {complaint.status}
+                                    </span>
                                 </div>
-                                <Link
-                                    to="/citizen/notifications"
-                                    className="text-[var(--primary)] text-sm mt-4 block hover:underline"
-                                >
-                                    All notifications →
-                                </Link>
-                            </div>
-                            <br />
-                        </div>
-<br />
-                        {/* Quick Submit Categories */}
-                        <div className="card">
-                            <div className="p-6">
-                                <br />
-                                <h3 className="card-title">Quick Report</h3>
-                                <div className="grid grid-cols-2 gap-3 mt-4">
-                                    {quickCategories.map(cat => (
-                                        <button
-                                            key={cat}
-                                            onClick={() => alert(`Opening submit form for: ${cat}`)}
-                                            className="quick-btn"
-                                        >
-                                            {cat}
-                                        </button>
-                                    ))}
-                                </div>
-                                <br />
-                            </div>
-                        </div>
+                            );
+                        })}
                     </div>
-                </div>
-<br />
-                {/* Map Preview */}
-                <div className="card mt-8">
-                    <div className="p-6">
-                        <br />
-                        <div className="flex justify-between mb-4">
-                            <h3 className="card-title">Live Complaints Near You</h3>
-                            <Link to="/citizen/map" className="text-[var(--primary)] hover:underline">
-                                Open Full Map →
-                            </Link>
-                        </div>
-                        <div className="map-placeholder">
-                            📍 Interactive Leaflet/Google Map with pins (GPS tagged complaints)
-                        </div>
-                        <br />
-                    </div>
-                </div>
+                </article>
+            </section>
+
+            <div className="citizen-mobile-nav">
+                <button className="active"><MapIcon size={18} /><span>Home</span></button>
+                <button><Search size={18} /><span>Records</span></button>
+                <button className="primary"><Plus size={20} /></button>
+                <button><Navigation size={18} /><span>Map</span></button>
+                <button><Bell size={18} /><span>Alerts</span></button>
             </div>
         </div>
     );

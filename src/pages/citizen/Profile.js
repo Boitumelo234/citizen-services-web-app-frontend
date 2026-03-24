@@ -1,20 +1,50 @@
-// Profile.jsx
-import '../../styles/dashboard.css';
+import { useEffect, useState } from "react";
+import "../../styles/dashboard.css";
+import { getProfile, updateProfile } from "../../services/citizenService";
 
 function Profile() {
-    // Mock user data
-    const user = {
-        name: 'Boitumelo M.',
-        email: 'boitumelo@example.com',
-        phone: '+27 82 123 4567',
-        address: '123 Mandela Drive, Rustenburg',
-        notifications: true
+    const [user, setUser] = useState({
+        email: "",
+        phone: "",
+        address: "",
+        ward: "",
+        profileImageUrl: "",
+    });
+    const [editing, setEditing] = useState(false);
+    const [error, setError] = useState("");
+
+    useEffect(() => {
+        const loadProfile = async () => {
+            try {
+                setUser(await getProfile());
+            } catch (err) {
+                setError(err.response?.data?.error || "Unable to load profile");
+            }
+        };
+
+        loadProfile();
+    }, []);
+
+    const handleChange = (event) => {
+        const { name, value } = event.target;
+        setUser((current) => ({ ...current, [name]: value }));
+    };
+
+    const handleSave = async () => {
+        try {
+            const updated = await updateProfile(user);
+            setUser(updated);
+            setEditing(false);
+        } catch (err) {
+            setError(err.response?.data?.error || "Unable to update profile");
+        }
     };
 
     return (
         <div className="dashboard-container">
             <h1 className="dashboard-title">My Profile</h1>
             <p className="subtitle">Manage your personal information and preferences</p>
+            {error ? <p className="subtitle">{error}</p> : null}
 
             <div className="card mt-8">
                 <div className="p-6 pt-8">
@@ -24,7 +54,7 @@ function Profile() {
                             <div className="space-y-4">
                                 <div>
                                     <label className="block text-sm text-[var(--text-light)]">Full Name</label>
-                                    <p className="mt-1 font-medium">{user.name}</p>
+                                    <p className="mt-1 font-medium">{user.email ? user.email.split("@")[0] : "Citizen"}</p>
                                 </div>
                                 <div>
                                     <label className="block text-sm text-[var(--text-light)]">Email</label>
@@ -32,11 +62,27 @@ function Profile() {
                                 </div>
                                 <div>
                                     <label className="block text-sm text-[var(--text-light)]">Phone Number</label>
-                                    <p className="mt-1 font-medium">{user.phone}</p>
+                                    {editing ? (
+                                        <input className="mt-1 font-medium" name="phone" value={user.phone || ""} onChange={handleChange} />
+                                    ) : (
+                                        <p className="mt-1 font-medium">{user.phone || "Not set"}</p>
+                                    )}
                                 </div>
                                 <div>
                                     <label className="block text-sm text-[var(--text-light)]">Address</label>
-                                    <p className="mt-1 font-medium">{user.address}</p>
+                                    {editing ? (
+                                        <input className="mt-1 font-medium" name="address" value={user.address || ""} onChange={handleChange} />
+                                    ) : (
+                                        <p className="mt-1 font-medium">{user.address || "Not set"}</p>
+                                    )}
+                                </div>
+                                <div>
+                                    <label className="block text-sm text-[var(--text-light)]">Ward</label>
+                                    {editing ? (
+                                        <input className="mt-1 font-medium" name="ward" value={user.ward || ""} onChange={handleChange} />
+                                    ) : (
+                                        <p className="mt-1 font-medium">{user.ward || "Not set"}</p>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -44,13 +90,17 @@ function Profile() {
                         <div>
                             <h3 className="card-title mb-6">Preferences</h3>
                             <div className="space-y-4">
-                                <label className="flex items-center gap-3">
-                                    <span>Receive push notifications for updates</span> <input type="checkbox" checked={user.notifications} readOnly />
-                                </label>
+                                <p className="text-[var(--text-medium)]">Profile image URL is available in the backend model and can be added here when needed.</p>
                                 <br />
-                                <button className="btn-primary mt-6">
-                                    Edit Profile
-                                </button>
+                                {editing ? (
+                                    <button className="btn-primary mt-6" onClick={handleSave}>
+                                        Save Profile
+                                    </button>
+                                ) : (
+                                    <button className="btn-primary mt-6" onClick={() => setEditing(true)}>
+                                        Edit Profile
+                                    </button>
+                                )}
                             </div>
                         </div>
                     </div>
