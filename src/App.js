@@ -8,7 +8,6 @@ import AdminLayout from "./components/layout/AdminLayout";
 import Home from "./pages/public/Home";
 import About from "./pages/public/About";
 import Services from "./pages/public/Services";
-import Contact from "./pages/public/Contact";
 import FAQ from "./pages/public/FAQ";
 import Notices from "./pages/public/Notices";
 import Login from "./pages/auth/Login";
@@ -32,6 +31,8 @@ import Reports from "./pages/admin/Reports";
 import Users from "./pages/admin/Users";
 import SystemSettings from "./pages/admin/SystemSettings";
 
+import ResetPassword from "./pages/auth/ResetPassword";
+
 function App() {
     return (
         <BrowserRouter>
@@ -41,7 +42,6 @@ function App() {
                 <Route path="/" element={<PublicLayout><Home /></PublicLayout>} />
                 <Route path="/about" element={<PublicLayout><About /></PublicLayout>} />
                 <Route path="/services" element={<PublicLayout><Services /></PublicLayout>} />
-                <Route path="/contact" element={<PublicLayout><Contact /></PublicLayout>} />
                 <Route path="/faq" element={<PublicLayout><FAQ /></PublicLayout>} />
                 <Route path="/notices" element={<PublicLayout><Notices /></PublicLayout>} />
                 <Route path="/login" element={<PublicLayout><Login /></PublicLayout>} />
@@ -65,6 +65,7 @@ function App() {
                 <Route path="/admin/users" element={<AdminLayout><Users /></AdminLayout>} />
                 <Route path="/admin/settings" element={<AdminLayout><SystemSettings /></AdminLayout>} />
 
+                <Route path="/reset-password" element={<ResetPassword />} />
             </Routes>
         </BrowserRouter>
     );

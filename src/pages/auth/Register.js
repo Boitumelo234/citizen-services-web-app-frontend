@@ -1,84 +1,74 @@
-// src/pages/auth/Register.js
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import Input from "../../components/common/Input";
 import Button from "../../components/common/Button";
+import "./Register.css";
 
-function Register() {
+// Added onSwitchToLogin to the props here
+function Register({ onRegisterSuccess, onSwitchToLogin }) {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
-    const navigate = useNavigate();
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        console.log("Register form submitted");
-        console.log("Email:", email, "Password:", password);
-
         setError("");
         setLoading(true);
 
         try {
             const response = await fetch("http://localhost:8080/api/auth/register", {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    email: email,
-                    password: password,
-                }),
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email, password }),
             });
 
             const data = await response.json();
 
-            if (!response.ok) {
-                // Safely read data.error (backend now returns JSON)
-                throw new Error(data.error || "Registration failed");
-            }
+            if (!response.ok) throw new Error(data.error || "Registration failed");
 
-            alert(data.message || "Registration successful! You can now log in.");
-            navigate("/login");
+            alert("Registration successful! You can now log in.");
+            if (onRegisterSuccess) onRegisterSuccess();
         } catch (err) {
-            console.error("Registration error:", err);
-            setError(err.message || "Something went wrong. Try again.");
+            setError(err.message);
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <section style={{ maxWidth: "400px", margin: "2rem auto", padding: "1rem" }}>
-            <h2>Register (Citizen)</h2>
-            {error && <p style={{ color: "red", marginBottom: "1rem" }}>{error}</p>}
+        <div className="register-container">
+            {error && <p className="error-message">{error}</p>}
 
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={handleSubmit} className="register-form">
                 <Input
-                    label="Email"
+                    label="Email Address"
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value.trim())}
+                    placeholder="name@example.com"
                     required
                 />
                 <Input
-                    label="Password"
+                    label="Create Password"
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
+                    placeholder="At least 8 characters"
                     required
                 />
-                <Button
-                    type="submit"
-                    text={loading ? "Registering..." : "Register"}
-                    disabled={loading}
-                />
+                <div className="form-action">
+                    <Button
+                        type="submit"
+                        text={loading ? "Creating Account..." : "Register"}
+                        disabled={loading}
+                    />
+                </div>
             </form>
 
-            <p style={{ marginTop: "1rem" }}>
-                Already have an account? <a href="/login">Login here</a>
+            <p className="login-prompt">
+                Already have an account? <span className="text-link" onClick={onSwitchToLogin}>Login here</span>
             </p>
-        </section>
+        </div>
     );
 }
 

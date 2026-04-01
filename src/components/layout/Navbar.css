@@ -1,6 +1,7 @@
 /* Navbar Container */
 .navbar {
-    background: linear-gradient(135deg, #8B0000 0%, #A52A2A 100%); /* Rustenburg maroon */
+    /* Changed to a lighter blue gradient to match the Footer's theme */
+    background: linear-gradient(135deg, #003366 0%, #00264d 100%);
     color: white;
     padding: 0.8rem 2rem;
     position: sticky;
@@ -10,16 +11,14 @@
 }
 
 .navbar-container {
-    max-width: 1400px;
-    margin: 0 auto;
+    width: 100%;
+    padding: 0 2rem;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    flex-wrap: wrap;
-    gap: 1rem;
 }
 
-/* Logo Section */
+/* Logo Section - Left Side */
 .navbar-logo-container {
     display: flex;
     align-items: center;
@@ -29,7 +28,7 @@
 }
 
 .navbar-logo {
-    height: 50px;
+    height: 80px;
     width: auto;
     object-fit: contain;
 }
@@ -40,12 +39,11 @@
     white-space: nowrap;
 }
 
-/* Navigation Links */
+/* Navigation Links - Right Side */
 .nav-links {
     display: flex;
     align-items: center;
     gap: 1.5rem;
-    flex-wrap: wrap;
 }
 
 .nav-links a:not(.nav-btn) {
@@ -58,29 +56,18 @@
 }
 
 .nav-links a:not(.nav-btn):hover {
-    color: #FFD700; /* Gold accent */
+    color: rgba(255, 255, 255, 0.85);
 }
 
 .nav-links a:not(.nav-btn)::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    width: 0;
-    height: 2px;
-    background: #FFD700;
-    transition: width 0.3s ease;
-}
-
-.nav-links a:not(.nav-btn):hover::after {
-    width: 100%;
+    content: none;
 }
 
 /* Auth Buttons */
 .nav-auth-buttons {
     display: flex;
-    gap: 0.8rem;
-    margin-left: 1rem;
+    gap: 1rem;
+    margin-left: 2rem;
 }
 
 .nav-btn {
@@ -93,26 +80,36 @@
     white-space: nowrap;
 }
 
+/* Style for the Login Button in the Nav */
 .login-btn {
-    background: transparent;
-    border: 2px solid white;
-    color: white;
+    background: white;
+    color: #003366; /* Updated to match new navbar primary blue */
+    border: none;
+    padding: 0.6rem 1.5rem;
+    border-radius: 4px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    letter-spacing: 0.5px;
 }
 
 .login-btn:hover {
-    background: white;
-    color: #8B0000;
+    background: #e6f0ff;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
 .register-btn {
-    background: #FFD700; /* Gold */
-    border: 2px solid #FFD700;
-    color: #8B0000;
+    background: white;
+    border: 2px solid white;
+    color: #003366; /* Updated to match new navbar primary blue */
 }
 
 .register-btn:hover {
-    background: #e6c200;
-    border-color: #e6c200;
+    background: rgba(255, 255, 255, 0.9);
+    border-color: white;
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
@@ -130,12 +127,8 @@
         justify-content: space-between;
         padding-top: 1rem;
         border-top: 1px solid rgba(255, 255, 255, 0.2);
-    }
-
-    .nav-auth-buttons {
-        margin-left: 0;
-        width: 100%;
-        justify-content: flex-end;
+        flex-wrap: wrap;
+        gap: 1rem;
     }
 }
 
@@ -153,12 +146,39 @@
     }
 
     .nav-links {
-        gap: 1rem;
-        font-size: 0.9rem;
+        display: flex;
+        align-items: center;
+        gap: 2rem;
+        margin-left: auto;
     }
 
     .nav-btn {
         padding: 0.5rem 1rem;
         font-size: 0.9rem;
     }
+}
+
+/* Ensure the modal backdrop looks professional */
+.modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+    backdrop-filter: blur(4px);
+}
+
+.modal {
+    background: white;
+    padding: 2.5rem;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 450px;
+    position: relative;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
 }

@@ -1,11 +1,11 @@
-// src/pages/auth/Login.js
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
 import Input from "../../components/common/Input";
 import Button from "../../components/common/Button";
+import "./Login.css";
 
-function Login() {
+function Login({ onLoginSuccess, onSwitchToRegister, onSwitchToForgot }) {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
@@ -20,37 +20,22 @@ function Login() {
         try {
             const response = await fetch("http://localhost:8080/api/auth/login", {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/x-www-form-urlencoded",
-                },
-                body: new URLSearchParams({
-                    username: email,
-                    password: password,
-                }),
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                body: new URLSearchParams({ username: email, password: password }),
             });
 
             const data = await response.json();
+            if (!response.ok) throw new Error(data.error || "Login failed");
 
-            if (!response.ok) {
-                // Now safely read data.error (because backend returns JSON)
-                throw new Error(data.error || "Login failed");
-            }
-
-            // Save token
             localStorage.setItem("access_token", data.access_token);
-
-            // Decode to get role (normalize case)
             const decoded = jwtDecode(data.access_token);
             const role = (decoded.role || "").toLowerCase();
 
-            // Redirect based on role
-            if (role === "admin") {
-                navigate("/admin");
-                alert("Welcome Admin!");
-            } else {
-                navigate("/citizen");
-                alert("Welcome Citizen!");
-            }
+            if (onLoginSuccess) onLoginSuccess();
+
+            if (role === "admin") navigate("/admin");
+            else navigate("/citizen");
+
         } catch (err) {
             console.error("Login error:", err);
             setError(err.message || "Invalid email or password");
@@ -60,25 +45,35 @@ function Login() {
     };
 
     return (
-        <section style={{ maxWidth: "400px", margin: "2rem auto", padding: "1rem" }}>
-            <h2>Login</h2>
-            {error && <p style={{ color: "red", marginBottom: "1rem" }}>{error}</p>}
+        <div className="login-modal-content">
+            {error && <p className="error-message">{error}</p>}
 
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={handleSubmit} className="login-form">
                 <Input
                     label="Email"
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value.trim())}
+                    placeholder="Enter your email"
                     required
                 />
+
                 <Input
                     label="Password"
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Enter your password"
                     required
                 />
+
+                {/* Updated: Forgot Password link placed before the submit button */}
+                <div className="forgot-password-link">
+                    <span className="auth-link-small" onClick={onSwitchToForgot}>
+                        Forgot Password?
+                    </span>
+                </div>
+
                 <Button
                     type="submit"
                     text={loading ? "Logging in..." : "Login"}
@@ -86,10 +81,10 @@ function Login() {
                 />
             </form>
 
-            <p style={{ marginTop: "1rem" }}>
-                Don't have an account? <a href="/register">Register here</a>
+            <p className="switch-prompt">
+                Don't have an account? <span className="auth-link" onClick={onSwitchToRegister}>Register here</span>
             </p>
-        </section>
+        </div>
     );
 }
 
