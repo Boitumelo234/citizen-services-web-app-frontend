@@ -4,7 +4,7 @@ import PublicLayout from "./components/layout/PublicLayout";
 import CitizenLayout from "./components/layout/CitizenLayout";
 import AdminLayout from "./components/layout/AdminLayout";
 
-// Public
+// ================= PUBLIC =================
 import Home from "./pages/public/Home";
 import About from "./pages/public/About";
 import Services from "./pages/public/Services";
@@ -14,7 +14,7 @@ import Notices from "./pages/public/Notices";
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
 
-// Citizen
+// ================= CITIZEN =================
 import CitizenDashboard from "./pages/citizen/CitizenDashboard";
 import CitizenOverview from "./pages/citizen/CitizenOverview";
 import SubmitComplaint from "./pages/citizen/SubmitComplaint";
@@ -23,51 +23,64 @@ import ComplaintMap from "./pages/citizen/ComplaintMap";
 import Notifications from "./pages/citizen/Notifications";
 import Profile from "./pages/citizen/Profile";
 
-// Admin
+// ================= ADMIN =================
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminOverview from "./pages/admin/AdminOverview";
 import ManageComplaints from "./pages/admin/ManageComplaints";
 import Departments from "./pages/admin/Departments";
 import Reports from "./pages/admin/Reports";
-import Users from "./pages/admin/Users";
 import SystemSettings from "./pages/admin/SystemSettings";
+import UserOverview from "./pages/admin/UserOverview";
 
 function App() {
-    return (
-        <BrowserRouter>
-            <Routes>
+  return (
+    <BrowserRouter>
+      <Routes>
 
-                {/* PUBLIC */}
-                <Route path="/" element={<PublicLayout><Home /></PublicLayout>} />
-                <Route path="/about" element={<PublicLayout><About /></PublicLayout>} />
-                <Route path="/services" element={<PublicLayout><Services /></PublicLayout>} />
-                <Route path="/contact" element={<PublicLayout><Contact /></PublicLayout>} />
-                <Route path="/faq" element={<PublicLayout><FAQ /></PublicLayout>} />
-                <Route path="/notices" element={<PublicLayout><Notices /></PublicLayout>} />
-                <Route path="/login" element={<PublicLayout><Login /></PublicLayout>} />
-                <Route path="/register" element={<PublicLayout><Register /></PublicLayout>} />
+        {/* ================= PUBLIC ================= */}
+        <Route path="/"         element={<PublicLayout><Home /></PublicLayout>} />
+        <Route path="/about"    element={<PublicLayout><About /></PublicLayout>} />
+        <Route path="/services" element={<PublicLayout><Services /></PublicLayout>} />
+        <Route path="/contact"  element={<PublicLayout><Contact /></PublicLayout>} />
+        <Route path="/faq"      element={<PublicLayout><FAQ /></PublicLayout>} />
+        <Route path="/notices"  element={<PublicLayout><Notices /></PublicLayout>} />
+        <Route path="/login"    element={<PublicLayout><Login /></PublicLayout>} />
+        <Route path="/register" element={<PublicLayout><Register /></PublicLayout>} />
 
-                {/* CITIZEN */}
-                <Route path="/citizen" element={<CitizenLayout><CitizenDashboard /></CitizenLayout>} />
-                <Route path="/citizen/overview" element={<CitizenLayout><CitizenOverview /></CitizenLayout>} />
-                <Route path="/citizen/submit" element={<CitizenLayout><SubmitComplaint /></CitizenLayout>} />
-                <Route path="/citizen/my-complaints" element={<CitizenLayout><MyComplaints /></CitizenLayout>} />
-                <Route path="/citizen/map" element={<CitizenLayout><ComplaintMap /></CitizenLayout>} />
-                <Route path="/citizen/notifications" element={<CitizenLayout><Notifications /></CitizenLayout>} />
-                <Route path="/citizen/profile" element={<CitizenLayout><Profile /></CitizenLayout>} />
+        {/* ================= CITIZEN ================= */}
+        <Route path="/citizen"               element={<CitizenLayout><CitizenDashboard /></CitizenLayout>} />
+        <Route path="/citizen/overview"      element={<CitizenLayout><CitizenOverview /></CitizenLayout>} />
+        <Route path="/citizen/submit"        element={<CitizenLayout><SubmitComplaint /></CitizenLayout>} />
+        <Route path="/citizen/my-complaints" element={<CitizenLayout><MyComplaints /></CitizenLayout>} />
+        <Route path="/citizen/map"           element={<CitizenLayout><ComplaintMap /></CitizenLayout>} />
+        <Route path="/citizen/notifications" element={<CitizenLayout><Notifications /></CitizenLayout>} />
+        <Route path="/citizen/profile"       element={<CitizenLayout><Profile /></CitizenLayout>} />
 
-                {/* ADMIN */}
-                <Route path="/admin" element={<AdminLayout><AdminDashboard /></AdminLayout>} />
-                <Route path="/admin/overview" element={<AdminLayout><AdminOverview /></AdminLayout>} />
-                <Route path="/admin/complaints" element={<AdminLayout><ManageComplaints /></AdminLayout>} />
-                <Route path="/admin/departments" element={<AdminLayout><Departments /></AdminLayout>} />
-                <Route path="/admin/reports" element={<AdminLayout><Reports /></AdminLayout>} />
-                <Route path="/admin/users" element={<AdminLayout><Users /></AdminLayout>} />
-                <Route path="/admin/settings" element={<AdminLayout><SystemSettings /></AdminLayout>} />
+        {/* ================= ADMIN ================= */}
+        {/* KPI cards, charts, activity feed */}
+        <Route path="/admin"             element={<AdminLayout><AdminDashboard /></AdminLayout>} />
 
-            </Routes>
-        </BrowserRouter>
-    );
+        {/* Detailed stats breakdown */}
+        <Route path="/admin/overview"    element={<AdminLayout><AdminOverview /></AdminLayout>} />
+
+        {/* Complaint management queue */}
+        <Route path="/admin/complaints"  element={<AdminLayout><ManageComplaints /></AdminLayout>} />
+
+        {/* Department management */}
+        <Route path="/admin/departments" element={<AdminLayout><Departments /></AdminLayout>} />
+
+        {/* Reports and analytics */}
+        <Route path="/admin/reports"     element={<AdminLayout><Reports /></AdminLayout>} />
+
+        {/* User management */}
+        <Route path="/admin/users"       element={<AdminLayout><UserOverview /></AdminLayout>} />
+
+        {/* System configuration */}
+        <Route path="/admin/settings"    element={<AdminLayout><SystemSettings /></AdminLayout>} />
+
+      </Routes>
+    </BrowserRouter>
+  );
 }
 
 export default App;
