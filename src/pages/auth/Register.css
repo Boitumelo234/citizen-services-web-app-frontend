@@ -1,0 +1,64 @@
+/* src/pages/auth/Register.css */
+.register-container {
+    padding: 10px 15px;
+}
+
+.register-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
+}
+
+.register-container .error-message {
+    background-color: #fff5f5;
+    color: #c53030;
+    padding: 1rem;
+    border-radius: 8px;
+    border: 1px solid #feb2b2;
+    margin-bottom: 1.5rem;
+    font-size: 0.85rem;
+}
+
+.form-action {
+    margin-top: 10px;
+}
+
+/* Button Refinement */
+.form-action button {
+    width: 100%;
+    padding: 12px;
+    font-size: 1rem;
+    font-weight: 700;
+    background-color: #003366;
+    border-radius: 6px;
+    box-shadow: 0 4px 6px rgba(0, 51, 102, 0.1);
+    transition: all 0.3s ease;
+}
+
+.form-action button:hover {
+    background-color: #00264d;
+    box-shadow: 0 6px 12px rgba(0, 51, 102, 0.2);
+    transform: translateY(-1px);
+}
+
+.login-prompt {
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    text-align: center;
+    font-size: 0.95rem;
+    color: #718096;
+    border-top: 1px solid #edf2f7;
+}
+
+.text-link {
+    color: #003366;
+    font-weight: 700;
+    cursor: pointer;
+    padding-left: 5px;
+    transition: color 0.2s ease;
+}
+
+.text-link:hover {
+    color: #0052a3;
+    text-decoration: underline;
+}
