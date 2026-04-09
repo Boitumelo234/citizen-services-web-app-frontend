@@ -1,0 +1,118 @@
+.about-page {
+    padding: 80px 20px;
+    max-width: 1100px;
+    margin: 0 auto;
+    min-height: 70vh;
+}
+
+.about-header {
+    text-align: center;
+    margin-bottom: 60px;
+}
+
+.about-header h2 {
+    color: #003366;
+    font-size: 2.8rem;
+    margin-bottom: 10px;
+}
+
+.underline {
+    width: 80px;
+    height: 4px;
+    background: #003366;
+    margin: 0 auto 30px;
+    border-radius: 2px;
+}
+
+.about-intro {
+    font-size: 1.25rem;
+    color: #4a5568;
+    line-height: 1.7;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+/* Objectives Grid */
+.objectives-section h3 {
+    text-align: center;
+    color: #003366;
+    font-size: 1.8rem;
+    margin-bottom: 40px;
+}
+
+.objectives-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 25px;
+    margin-bottom: 60px;
+}
+
+.objective-card {
+    background: #ffffff;
+    padding: 30px 20px;
+    border-radius: 12px;
+    text-align: center;
+    box-shadow: 0 4px 15px rgba(0, 51, 102, 0.05);
+    border: 1px solid #edf2f7;
+    transition: transform 0.3s ease;
+}
+
+.objective-card:hover {
+    transform: translateY(-5px);
+    border-color: #003366;
+}
+
+.obj-icon {
+    color: #003366;
+    margin-bottom: 15px;
+    display: flex;
+    justify-content: center;
+}
+
+.objective-card p {
+    font-weight: 500;
+    color: #2d3748;
+}
+
+/* Audience Card */
+.target-audience {
+    display: flex;
+    justify-content: center;
+}
+
+.audience-card {
+    background: #003366;
+    color: white;
+    padding: 40px;
+    border-radius: 15px;
+    display: flex;
+    align-items: center;
+    gap: 30px;
+    max-width: 800px;
+    box-shadow: 0 10px 30px rgba(0, 51, 102, 0.2);
+}
+
+.audience-icon {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 20px;
+    border-radius: 50%;
+}
+
+.audience-text h3 {
+    color: #ffffff;
+    margin-bottom: 10px;
+}
+
+.audience-text p {
+    font-size: 1.1rem;
+    line-height: 1.6;
+    opacity: 0.9;
+}
+
+/* Responsive fixes */
+@media (max-width: 768px) {
+    .audience-card {
+        flex-direction: column;
+        text-align: center;
+    }
+}
