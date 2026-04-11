@@ -1,4 +1,6 @@
 import { Link } from "react-router-dom";
+import { Plus } from "lucide-react";
+import "../../styles/dashboard.css";
 
 function CitizenOverview() {
     const overview = {
@@ -29,65 +31,51 @@ function CitizenOverview() {
     ];
 
     return (
-        <div className="citizen-page">
-            <section className="citizen-page-header">
+        <div className="citizen-v2-page">
+            <section className="citizen-v2-header enhanced">
                 <div>
                     <h1>Overview</h1>
-                    <p>Your activity and service impact across municipal departments</p>
+                    <p>Your activity and impact across municipal services</p>
                 </div>
-                <Link to="/citizen/submit" className="citizen-chip">
-                    New Complaint
-                </Link>
+                <Link to="/citizen/submit" className="citizen-v2-primary-btn"><Plus size={16} /> New Complaint</Link>
             </section>
 
-            <section className="citizen-overview-grid">
+            <section className="overview-stat-grid">
                 {stats.map((stat) => (
-                    <article key={stat.label} className="citizen-stat-card">
+                    <article key={stat.label} className="citizen-v2-card stat">
                         <p>{stat.label}</p>
                         <h3>{stat.value}</h3>
                     </article>
                 ))}
             </section>
 
-            <section className="citizen-two-column">
-                <article className="citizen-panel soft">
-                    <div className="citizen-panel-head">
-                        <h3>Top Categories</h3>
-                    </div>
-                    <div className="citizen-list">
-                        {overview.topCategories.map((category) => (
-                            <div key={category.name} className="citizen-list-item">
-                                <strong>{category.name}</strong>
-                                <span className="citizen-pill">{category.count}</span>
-                            </div>
-                        ))}
+            <section className="overview-panels">
+                <article className="citizen-v2-card">
+                    <div className="citizen-v2-card-head"><h3>Your Top Categories</h3></div>
+                    <div className="chart-placeholder">
+                        {overview.topCategories.length === 0
+                            ? "No category trend data yet."
+                            : overview.topCategories.map((category) => `${category.name} ${category.count}`).join(" | ")}
                     </div>
                 </article>
 
-                <article className="citizen-panel soft">
-                    <div className="citizen-panel-head">
-                        <h3>Monthly Trend</h3>
-                    </div>
-                    <div className="citizen-list">
-                        {overview.monthlyTrend.map((item) => (
-                            <div key={item.month} className="citizen-list-item">
-                                <strong>{item.month}</strong>
-                                <span className="citizen-pill">{item.count}</span>
-                            </div>
-                        ))}
+                <article className="citizen-v2-card">
+                    <div className="citizen-v2-card-head"><h3>Activity Trend (Last 6 Months)</h3></div>
+                    <div className="chart-placeholder">
+                        {overview.monthlyTrend.length === 0
+                            ? "No monthly trend data yet."
+                            : overview.monthlyTrend.map((item) => `${item.month} ${item.count}`).join(" | ")}
                     </div>
                 </article>
-            </section>
 
-            <section className="citizen-panel soft" style={{ marginTop: "1rem" }}>
-                <div className="citizen-panel-head">
-                    <h3>Badges and Achievements</h3>
-                </div>
-                <div className="citizen-badge-row">
-                    <span>Consistent Reporter</span>
-                    <span>Ward Watch</span>
-                    <span>Service Champion</span>
-                </div>
+                <article className="citizen-v2-card">
+                    <div className="citizen-v2-card-head"><h3>Badges & Achievements</h3></div>
+                    <div className="badge-row">
+                        <span>Eco Warrior</span>
+                        <span>Top Reporter Q4</span>
+                        <span>Fast Responder</span>
+                    </div>
+                </article>
             </section>
         </div>
     );

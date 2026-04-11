@@ -74,9 +74,7 @@ function ComplaintForm({ selectedLocation, onSubmit, onCancel }) {
 
     const handleFileChange = (event) => {
         const file = event.target.files?.[0];
-        if (!file) {
-            return;
-        }
+        if (!file) return;
 
         if (file.size > 10 * 1024 * 1024) {
             setError("File is too large (max 10 MB)");
@@ -104,9 +102,7 @@ function ComplaintForm({ selectedLocation, onSubmit, onCancel }) {
         }
         setSelectedFile(null);
         const input = document.getElementById("complaint-file-input-map");
-        if (input) {
-            input.value = "";
-        }
+        if (input) input.value = "";
     };
 
     const handleSubmit = async (event) => {
@@ -158,9 +154,7 @@ function ComplaintForm({ selectedLocation, onSubmit, onCancel }) {
 
             const data = await response.json();
             setMessage(`Complaint submitted! Reference: ${data.referenceNumber || "-"}`);
-            setTimeout(() => {
-                onSubmit(data);
-            }, 1500);
+            setTimeout(() => onSubmit(data), 1500);
         } catch (submissionError) {
             console.error("Submission error:", submissionError);
             setError(submissionError.message || "Failed to submit complaint. Please try again.");
@@ -175,23 +169,21 @@ function ComplaintForm({ selectedLocation, onSubmit, onCancel }) {
                 <div className="p-6">
                     <h2 className="text-2xl font-bold mb-4">Report New Issue</h2>
 
-                    {message && (
+                    {message ? (
                         <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
                             {message}
                         </div>
-                    )}
-                    {error && (
+                    ) : null}
+                    {error ? (
                         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
                             {error}
                         </div>
-                    )}
+                    ) : null}
 
                     <div className="bg-gray-100 p-3 rounded mb-4">
                         <p className="text-sm text-gray-700">
-                            <strong>Selected Location:</strong>
-                            <br />
-                            Lat: {selectedLocation.lat.toFixed(6)}
-                            <br />
+                            <strong>Selected Location:</strong><br />
+                            Lat: {selectedLocation.lat.toFixed(6)}<br />
                             Lng: {selectedLocation.lng.toFixed(6)}
                         </p>
                     </div>
@@ -207,9 +199,7 @@ function ComplaintForm({ selectedLocation, onSubmit, onCancel }) {
                             >
                                 <option value="">Select category</option>
                                 {categories.map((category) => (
-                                    <option key={category} value={category}>
-                                        {category}
-                                    </option>
+                                    <option key={category} value={category}>{category}</option>
                                 ))}
                             </select>
                         </div>
@@ -262,18 +252,18 @@ function ComplaintForm({ selectedLocation, onSubmit, onCancel }) {
                                     <div className="space-y-3">
                                         <p className="text-green-700 font-medium break-all">{selectedFile.name}</p>
                                         <p className="text-sm text-gray-500">{(selectedFile.size / 1048576).toFixed(2)} MB</p>
-                                        {previewUrl && (
+                                        {previewUrl ? (
                                             <img
                                                 src={previewUrl}
                                                 alt="Preview"
                                                 className="max-h-48 mx-auto rounded-lg shadow-sm object-contain"
                                             />
-                                        )}
+                                        ) : null}
                                     </div>
                                 )}
                             </label>
 
-                            {selectedFile && (
+                            {selectedFile ? (
                                 <div className="mt-3 text-center">
                                     <button
                                         type="button"
@@ -283,7 +273,7 @@ function ComplaintForm({ selectedLocation, onSubmit, onCancel }) {
                                         Remove / Change file
                                     </button>
                                 </div>
-                            )}
+                            ) : null}
                         </div>
 
                         <div className="flex gap-3">
@@ -332,66 +322,56 @@ function ComplaintMap() {
     };
 
     return (
-        <div className="citizen-page">
-            <section className="citizen-page-header">
-                <div>
-                    <h1>Complaint Map</h1>
-                    <p>Click on the map to pin the exact location of the issue you want to report.</p>
-                </div>
-                <div className="citizen-chip">Interactive Map</div>
-            </section>
+        <div className="dashboard-container">
+            <h1 className="dashboard-title">Complaint Map</h1>
+            <p className="subtitle">See reported issues across Rustenburg in real time</p>
 
-            <div className="citizen-map-shell">
-                <div className="citizen-map-canvas">
-                    <MapContainer
-                        center={rustenburgCenter}
-                        zoom={defaultZoom}
-                        scrollWheelZoom
-                        style={{ height: "100%", width: "100%" }}
-                        zoomControl
-                    >
-                        <TileLayer
-                            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                        />
-                        <LocationPicker onLocationSelect={handleLocationSelect} selectedLocation={selectedLocation} />
-                    </MapContainer>
-                </div>
+            <div className="card mt-8">
+                <div className="p-6 pt-8">
+                    <div style={{ height: "600px", width: "100%", borderRadius: "12px", overflow: "hidden", border: "1px solid #e5e7eb" }}>
+                        <MapContainer
+                            center={rustenburgCenter}
+                            zoom={defaultZoom}
+                            scrollWheelZoom
+                            style={{ height: "100%", width: "100%" }}
+                            zoomControl
+                        >
+                            <TileLayer
+                                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                            />
+                            <LocationPicker onLocationSelect={handleLocationSelect} selectedLocation={selectedLocation} />
+                        </MapContainer>
+                    </div>
 
-                <div className="citizen-tip">
-                    <strong>How to report on the map</strong>
-                    <p style={{ margin: "0.4rem 0 0" }}>
-                        Click anywhere on the map, confirm the pinned point, then complete the complaint form that opens.
-                    </p>
-                </div>
-
-                <div className="citizen-inline-grid">
-                    <div className="citizen-inline-card">
-                        <span className="citizen-dot" style={{ background: "#ef4444" }} />
-                        <span>Selected Pin</span>
-                    </div>
-                    <div className="citizen-inline-card">
-                        <span className="citizen-dot" style={{ background: "#f59e0b" }} />
-                        <span>In Progress</span>
-                    </div>
-                    <div className="citizen-inline-card">
-                        <span className="citizen-dot" style={{ background: "#22c55e" }} />
-                        <span>Resolved</span>
-                    </div>
-                    <div className="citizen-inline-card">
-                        <span className="citizen-dot" style={{ background: "#3b82f6" }} />
-                        <span>New Reports</span>
+                    <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                        <div className="flex items-center gap-2">
+                            <div className="w-4 h-4 rounded-full bg-red-500"></div>
+                            <span>High Priority</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-4 h-4 rounded-full bg-amber-500"></div>
+                            <span>In Progress</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-4 h-4 rounded-full bg-green-500"></div>
+                            <span>Resolved</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-4 h-4 rounded-full bg-blue-500"></div>
+                            <span>New</span>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            {showForm && selectedLocation && (
+            {showForm && selectedLocation ? (
                 <ComplaintForm
                     selectedLocation={selectedLocation}
                     onSubmit={handleFormSubmit}
                     onCancel={handleFormCancel}
                 />
-            )}
+            ) : null}
         </div>
     );
 }
