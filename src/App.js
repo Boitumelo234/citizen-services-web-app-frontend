@@ -29,11 +29,11 @@ import Profile          from "./pages/citizen/Profile";
 // ================= ADMIN =================
 import AdminDashboard  from "./pages/admin/AdminDashboard";
 import AdminOverview   from "./pages/admin/AdminOverview";
-import ManageComplaints from "./pages/admin/ManageComplaints";
-import Departments     from "./pages/admin/Departments";
-import Reports         from "./pages/admin/Reports";
-import SystemSettings  from "./pages/admin/SystemSettings";
-import UserOverview    from "./pages/admin/UserOverview";
+// import ManageComplaints from "./pages/admin/ManageComplaints";
+// import Departments     from "./pages/admin/Departments";
+// import Reports         from "./pages/admin/Reports";
+// import SystemSettings  from "./pages/admin/SystemSettings";
+// import UserOverview    from "./pages/admin/UserOverview";
 
 function App() {
   return (
@@ -100,31 +100,31 @@ function App() {
               <AdminLayout><AdminOverview /></AdminLayout>
             </ProtectedRoute>
           } />
-          <Route path="/admin/complaints" element={
-            <ProtectedRoute role="ADMIN">
-              <AdminLayout><ManageComplaints /></AdminLayout>
-            </ProtectedRoute>
-          } />
-          <Route path="/admin/departments" element={
-            <ProtectedRoute role="ADMIN">
-              <AdminLayout><Departments /></AdminLayout>
-            </ProtectedRoute>
-          } />
-          <Route path="/admin/reports" element={
-            <ProtectedRoute role="ADMIN">
-              <AdminLayout><Reports /></AdminLayout>
-            </ProtectedRoute>
-          } />
-          <Route path="/admin/users" element={
-            <ProtectedRoute role="ADMIN">
-              <AdminLayout><UserOverview /></AdminLayout>
-            </ProtectedRoute>
-          } />
-          <Route path="/admin/settings" element={
-            <ProtectedRoute role="ADMIN">
-              <AdminLayout><SystemSettings /></AdminLayout>
-            </ProtectedRoute>
-          } />
+          {/*<Route path="/admin/complaints" element={*/}
+          {/*  <ProtectedRoute role="ADMIN">*/}
+          {/*    <AdminLayout><ManageComplaints /></AdminLayout>*/}
+          {/*  </ProtectedRoute>*/}
+          {/*} />*/}
+          {/*<Route path="/admin/departments" element={*/}
+          {/*  <ProtectedRoute role="ADMIN">*/}
+          {/*    <AdminLayout><Departments /></AdminLayout>*/}
+          {/*  </ProtectedRoute>*/}
+          {/*} />*/}
+          {/*<Route path="/admin/reports" element={*/}
+          {/*  <ProtectedRoute role="ADMIN">*/}
+          {/*    <AdminLayout><Reports /></AdminLayout>*/}
+          {/*  </ProtectedRoute>*/}
+          {/*} />*/}
+          {/*<Route path="/admin/users" element={*/}
+          {/*  <ProtectedRoute role="ADMIN">*/}
+          {/*    <AdminLayout><UserOverview /></AdminLayout>*/}
+          {/*  </ProtectedRoute>*/}
+          {/*} />*/}
+          {/*<Route path="/admin/settings" element={*/}
+          {/*  <ProtectedRoute role="ADMIN">*/}
+          {/*    <AdminLayout><SystemSettings /></AdminLayout>*/}
+          {/*  </ProtectedRoute>*/}
+          {/*} />*/}
 
           {/* ── Fallback ────────────────────────────────── */}
           <Route path="*" element={<Navigate to="/" replace />} />

@@ -62,21 +62,21 @@ function Sidebar({ role }) {
                     <Link to="/admin/overview"         className={active("/admin/overview")}>
                         {ICONS.overview} Overview
                     </Link>
-                    <Link to="/admin/complaints"       className={active("/admin/complaints")}>
-                        {ICONS.complaints} Manage Complaints
-                    </Link>
-                    <Link to="/admin/departments"      className={active("/admin/departments")}>
-                        {ICONS.departments} Departments
-                    </Link>
-                    <Link to="/admin/reports"          className={active("/admin/reports")}>
-                        {ICONS.reports} Reports & Analytics
-                    </Link>
-                    <Link to="/admin/users"            className={active("/admin/users")}>
-                        {ICONS.users} User Management
-                    </Link>
-                    <Link to="/admin/settings"         className={active("/admin/settings")}>
-                        {ICONS.settings} System Settings
-                    </Link>
+                    {/*<Link to="/admin/complaints"       className={active("/admin/complaints")}>*/}
+                    {/*    {ICONS.complaints} Manage Complaints*/}
+                    {/*</Link>*/}
+                    {/*<Link to="/admin/departments"      className={active("/admin/departments")}>*/}
+                    {/*    {ICONS.departments} Departments*/}
+                    {/*</Link>*/}
+                    {/*<Link to="/admin/reports"          className={active("/admin/reports")}>*/}
+                    {/*    {ICONS.reports} Reports & Analytics*/}
+                    {/*</Link>*/}
+                    {/*<Link to="/admin/users"            className={active("/admin/users")}>*/}
+                    {/*    {ICONS.users} User Management*/}
+                    {/*</Link>*/}
+                    {/*<Link to="/admin/settings"         className={active("/admin/settings")}>*/}
+                    {/*    {ICONS.settings} System Settings*/}
+                    {/*</Link>*/}
                     <Link to="/">{ICONS.logout} Logout</Link>
                 </>
             )}
