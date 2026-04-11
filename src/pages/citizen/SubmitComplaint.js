@@ -1,5 +1,6 @@
 import "../../styles/dashboard.css";
 import { useEffect, useState } from "react";
+import { Plus } from "lucide-react";
 
 function SubmitComplaint() {
     const [category, setCategory] = useState("");
@@ -21,9 +22,7 @@ function SubmitComplaint() {
 
     const handleFileChange = (event) => {
         const file = event.target.files?.[0];
-        if (!file) {
-            return;
-        }
+        if (!file) return;
 
         if (file.size > 10 * 1024 * 1024) {
             setError("File is too large (max 10 MB)");
@@ -51,9 +50,7 @@ function SubmitComplaint() {
         }
         setSelectedFile(null);
         const input = document.getElementById("complaint-file-input");
-        if (input) {
-            input.value = "";
-        }
+        if (input) input.value = "";
     };
 
     const handleSubmit = async (event) => {
@@ -111,37 +108,35 @@ function SubmitComplaint() {
     };
 
     return (
-        <div className="citizen-page">
-            <section className="citizen-page-header">
+        <div className="citizen-v2-page">
+            <section className="citizen-v2-header enhanced">
                 <div>
                     <h1>Submit Complaint</h1>
-                    <p>Describe the issue, attach evidence, and send it to the municipality.</p>
+                    <p>Capture an issue with category, location, details and optional media</p>
                 </div>
-                <div className="citizen-chip">Citizen Report Form</div>
+                <button className="citizen-v2-primary-btn" type="button"><Plus size={16} /> Save Draft</button>
             </section>
 
-            <div className="citizen-form-shell">
-                {message && <p className="text-green-600 mb-4 font-medium">{message}</p>}
-                {error && <p className="text-red-600 mb-4">{error}</p>}
+            {message ? <p className="subtitle" style={{ color: "#15803d" }}>{message}</p> : null}
+            {error ? <p className="subtitle" style={{ color: "#dc2626" }}>{error}</p> : null}
 
+            <article className="citizen-v2-card submit-card">
                 <form onSubmit={handleSubmit}>
-                    <div className="citizen-form-grid">
-                        <div className="citizen-form-field">
-                            <label>Category</label>
+                    <div className="form-grid">
+                        <label>
+                            <span>Category</span>
                             <select value={category} onChange={(event) => setCategory(event.target.value)} required>
                                 <option value="">Select category</option>
-                                <option>Pothole / Road Damage</option>
-                                <option>Water Leak / Burst Pipe</option>
-                                <option>Power Outage</option>
-                                <option>Streetlight Fault</option>
+                                <option>Infrastructure & Roads</option>
+                                <option>Water & Sanitation</option>
+                                <option>Electricity & Energy</option>
                                 <option>Illegal Dumping</option>
-                                <option>Sewer Overflow</option>
                                 <option>Other</option>
                             </select>
-                        </div>
+                        </label>
 
-                        <div className="citizen-form-field">
-                            <label>Location</label>
+                        <label>
+                            <span>Location</span>
                             <input
                                 type="text"
                                 placeholder="Enter address or use current location"
@@ -149,57 +144,50 @@ function SubmitComplaint() {
                                 onChange={(event) => setLocation(event.target.value)}
                                 required
                             />
-                        </div>
+                        </label>
                     </div>
 
-                    <div className="citizen-form-field citizen-form-wide">
-                        <label>Description</label>
+                    <label className="full-row">
+                        <span>Description</span>
                         <textarea
-                            rows={5}
-                            placeholder="Please describe the issue in detail..."
+                            rows="6"
+                            placeholder="Describe the issue in detail"
                             value={description}
                             onChange={(event) => setDescription(event.target.value)}
                             required
                         />
-                    </div>
+                    </label>
 
-                    <div className="citizen-upload-wrap">
-                        <p className="citizen-muted">Attach Photo or Video (optional - max 10 MB)</p>
-                        <label
-                            htmlFor="complaint-file-input"
-                            className={`border-2 border-dashed rounded-xl p-10 text-center cursor-pointer transition block citizen-upload-card ${
-                                previewUrl ? "border-green-400 bg-green-50/40" : "border-gray-300 hover:border-blue-400 hover:bg-blue-50/30"
-                            }`}
-                        >
-                            <input
-                                id="complaint-file-input"
-                                type="file"
-                                accept="image/jpeg,image/png,image/gif,video/mp4,video/quicktime"
-                                onChange={handleFileChange}
-                                className="hidden"
-                            />
-
+                    <div className="upload-box">
+                        <label htmlFor="complaint-file-input" style={{ display: "block", cursor: "pointer" }}>
                             {!selectedFile ? (
-                                <div>
-                                    <p className="text-gray-700 font-medium mb-1">Click here or drag and drop</p>
-                                    <p className="text-sm text-gray-500">JPG, PNG, GIF, MP4 - max 10 MB</p>
-                                </div>
+                                <>
+                                    <p>Click or drag files here</p>
+                                    <small>Supported: JPG, PNG, MP4 (max 10MB)</small>
+                                </>
                             ) : (
-                                <div className="space-y-3">
-                                    <p className="text-green-700 font-medium break-all">{selectedFile.name}</p>
-                                    <p className="text-sm text-gray-500">{(selectedFile.size / 1048576).toFixed(2)} MB</p>
-                                    {previewUrl && (
+                                <>
+                                    <p>{selectedFile.name}</p>
+                                    <small>{(selectedFile.size / 1048576).toFixed(2)} MB</small>
+                                    {previewUrl ? (
                                         <img
                                             src={previewUrl}
                                             alt="Preview"
                                             className="max-h-48 mx-auto rounded-lg shadow-sm object-contain"
+                                            style={{ marginTop: "1rem" }}
                                         />
-                                    )}
-                                </div>
+                                    ) : null}
+                                </>
                             )}
                         </label>
-
-                        {selectedFile && (
+                        <input
+                            id="complaint-file-input"
+                            type="file"
+                            accept="image/jpeg,image/png,image/gif,video/mp4,video/quicktime"
+                            onChange={handleFileChange}
+                            className="hidden"
+                        />
+                        {selectedFile ? (
                             <div className="mt-3 text-center">
                                 <button
                                     type="button"
@@ -209,22 +197,16 @@ function SubmitComplaint() {
                                     Remove / Change file
                                 </button>
                             </div>
-                        )}
+                        ) : null}
                     </div>
 
-                    <div className="citizen-submit-actions">
-                        <button
-                            type="submit"
-                            disabled={loading}
-                            className={`px-8 py-3 rounded-lg font-medium text-white ${
-                                loading ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"
-                            }`}
-                        >
+                    <div className="submit-actions">
+                        <button className="citizen-v2-primary-btn" type="submit" disabled={loading}>
                             {loading ? "Submitting..." : "Submit Complaint"}
                         </button>
                     </div>
                 </form>
-            </div>
+            </article>
         </div>
     );
 }

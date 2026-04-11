@@ -20,16 +20,13 @@ function MyComplaints() {
             setLoading(false);
             return;
         }
-
         try {
             const response = await fetch("http://localhost:8080/api/complaints", {
                 headers: {
                     Authorization: `Bearer ${token}`,
                 },
             });
-            if (!response.ok) {
-                throw new Error("Failed to load complaints");
-            }
+            if (!response.ok) throw new Error("Failed to load complaints");
             const data = await response.json();
             setComplaints(data);
         } catch (fetchError) {
@@ -44,9 +41,7 @@ function MyComplaints() {
     }, [fetchComplaints]);
 
     const formatDate = (dateString) => {
-        if (!dateString) {
-            return "-";
-        }
+        if (!dateString) return "-";
         return new Date(dateString).toLocaleDateString("en-ZA", {
             year: "numeric",
             month: "short",
@@ -57,21 +52,14 @@ function MyComplaints() {
     };
 
     const getImageUrl = (photoUrl) => {
-        if (!photoUrl) {
-            return null;
-        }
+        if (!photoUrl) return null;
         if (photoUrl.startsWith("http://") || photoUrl.startsWith("https://")) {
             return photoUrl;
         }
 
         let filename = photoUrl;
-        if (photoUrl.includes("/")) {
-            filename = photoUrl.split("/").pop();
-        }
-        if (photoUrl.includes("\\")) {
-            filename = photoUrl.split("\\").pop();
-        }
-
+        if (photoUrl.includes("/")) filename = photoUrl.split("/").pop();
+        if (photoUrl.includes("\\")) filename = photoUrl.split("\\").pop();
         return `http://localhost:8080/api/files/${filename}`;
     };
 
@@ -98,63 +86,57 @@ function MyComplaints() {
     };
 
     return (
-        <div className="citizen-page">
-            <section className="citizen-page-header">
-                <div>
-                    <h1>My Complaints</h1>
-                    <p>Track submitted issues, review evidence, and add updates where needed.</p>
-                </div>
-                <Link to="/citizen/submit" className="citizen-chip">
-                    New Complaint
-                </Link>
-            </section>
+        <div className="dashboard-container">
+            <h1 className="dashboard-title">My Complaints</h1>
+            <p className="subtitle">Track the status of all your reported issues</p>
 
-            {loading && (
-                <div className="citizen-form-shell citizen-empty">
-                    <p>Loading your complaints...</p>
+            {loading ? (
+                <div className="text-center py-10">
+                    <p className="text-gray-600">Loading your complaints...</p>
                 </div>
-            )}
+            ) : null}
 
-            {error && !loading && (
+            {error && !loading ? (
                 <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
                     {error}
                 </div>
-            )}
+            ) : null}
 
-            {!loading && !error && complaints.length === 0 && (
-                <div className="citizen-form-shell citizen-empty">
-                    <p>You have not submitted any complaints yet.</p>
-                    <Link to="/citizen/submit" className="text-blue-600 hover:underline mt-2 inline-block">
-                        Submit your first complaint
-                    </Link>
+            {!loading && !error && complaints.length === 0 ? (
+                <div className="space-y-6 mt-8">
+                    <div className="card p-8 text-center">
+                        <p className="text-[var(--text-medium)]">You haven't submitted any complaints yet.</p>
+                        <Link to="/citizen/submit" className="btn-primary mt-4 inline-block">
+                            Submit Your First Complaint
+                        </Link>
+                        <br />
+                    </div>
                 </div>
-            )}
+            ) : null}
 
-            {!loading && !error && complaints.length > 0 && (
-                <div className="space-y-6">
+            {!loading && !error && complaints.length > 0 ? (
+                <div className="space-y-6 mt-8">
                     {complaints.map((complaint) => {
                         const imageUrl = getImageUrl(complaint.photoUrl);
                         const hasImageError = imageErrors[`${complaint.id}-main`];
-
                         return (
-                            <div key={complaint.id} className="card citizen-complaint-card">
-                                <div className="citizen-complaint-body">
-                                    <div className="flex justify-between items-start mb-4 gap-4">
+                            <div key={complaint.id} className="card">
+                                <div className="p-6">
+                                    <div className="flex justify-between items-start mb-4">
                                         <div>
                                             <h3 className="text-lg font-semibold">
                                                 {complaint.referenceNumber} - {complaint.category}
                                             </h3>
-                                            <p className="text-sm text-gray-500 mt-1">{formatDate(complaint.createdAt)}</p>
+                                            <p className="text-sm text-[var(--text-light)] mt-1">{formatDate(complaint.createdAt)}</p>
                                         </div>
-                                        <span className={`status ${String(complaint.status || "pending").toLowerCase().replace(/\s+/g, "-")}`}>
+                                        <span className={`status-badge status-${String(complaint.status || "pending").toLowerCase().replace(/\s+/g, "")}`}>
                                             {complaint.status || "Pending"}
                                         </span>
                                     </div>
-
-                                    <p className="text-gray-700 mb-4">{complaint.description}</p>
-
-                                    {complaint.photoUrl && !hasImageError && (
-                                        <div className="mb-4 border border-gray-200 rounded-lg p-2 bg-gray-50">
+                                    <br />
+                                    <p className="text-[var(--text-dark)]">{complaint.description}</p>
+                                    {complaint.photoUrl && !hasImageError ? (
+                                        <div className="mb-4 border border-gray-200 rounded-lg p-2 bg-gray-50 mt-4">
                                             <img
                                                 src={imageUrl}
                                                 alt="Complaint attachment"
@@ -163,11 +145,11 @@ function MyComplaints() {
                                                 onError={() => handleImageError(complaint.id, "main")}
                                             />
                                         </div>
-                                    )}
-
-                                    <div className="citizen-complaint-actions">
+                                    ) : null}
+                                    <div className="mt-6 flex gap-4">
                                         <button
-                                            className="btn-outline text-sm px-5 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg transition-colors"
+                                            className="btn-outline text-sm px-4 py-2"
+                                            type="button"
                                             onClick={(event) => {
                                                 event.preventDefault();
                                                 event.stopPropagation();
@@ -177,7 +159,8 @@ function MyComplaints() {
                                             View Details
                                         </button>
                                         <button
-                                            className="btn-outline text-sm px-5 py-2 bg-green-50 hover:bg-green-100 text-green-700 rounded-lg transition-colors"
+                                            className="btn-outline text-sm px-4 py-2"
+                                            type="button"
                                             onClick={(event) => {
                                                 event.preventDefault();
                                                 event.stopPropagation();
@@ -191,26 +174,27 @@ function MyComplaints() {
                             </div>
                         );
                     })}
+                    <br />
                 </div>
-            )}
+            ) : null}
 
-            {showDetails && selectedComplaint && (
+            {showDetails && selectedComplaint ? (
                 <ComplaintDetailsModal
                     complaint={selectedComplaint}
                     onClose={closeAll}
                     formatDate={formatDate}
                     getImageUrl={getImageUrl}
                 />
-            )}
+            ) : null}
 
-            {showUpdate && selectedComplaint && (
+            {showUpdate && selectedComplaint ? (
                 <AddUpdateModal
                     complaint={selectedComplaint}
                     onClose={closeAll}
                     onSuccess={fetchComplaints}
                     getImageUrl={getImageUrl}
                 />
-            )}
+            ) : null}
         </div>
     );
 }
