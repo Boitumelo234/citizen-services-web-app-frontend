@@ -1,3 +1,11 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+@import url("https://api.fontshare.com/v2/css?f[]=satoshi@900,700,500,400&display=swap");
+
+.citizen-ui-shell,
+.citizen-v2-layout {
+    min-height: 100vh;
+}
+
 .citizen-ui-shell {
     min-height: 100vh;
     background:
@@ -7,6 +15,71 @@
 
 .citizen-ui-content {
     padding: 1.5rem 2rem;
+}
+
+.citizen-v2-layout {
+    background: #f8f9fa;
+}
+
+.citizen-v2-sidebar {
+    width: 260px;
+    background: #1e293b;
+    color: #ffffff;
+    display: flex;
+    flex-direction: column;
+    padding: 1.2rem 0.9rem;
+    box-shadow: 0 10px 30px rgba(2, 6, 23, 0.25);
+}
+
+.citizen-v2-brand {
+    padding: 0.8rem 0.7rem 1.1rem;
+    font-family: "Satoshi", "Segoe UI", sans-serif;
+    font-size: 1.6rem;
+    font-weight: 700;
+}
+
+.citizen-v2-nav {
+    flex: 1;
+}
+
+.citizen-v2-nav-item {
+    display: block;
+    width: 100%;
+    color: #94a3b8;
+    text-decoration: none;
+    padding: 0.78rem 0.9rem;
+    border-radius: 0.85rem;
+    margin-bottom: 0.3rem;
+    font-family: "Satoshi", "Segoe UI", sans-serif;
+    font-weight: 600;
+    font-size: 0.95rem;
+    transition: all 0.2s ease;
+}
+
+.citizen-v2-nav-item:hover {
+    background: #334155;
+    color: #ffffff;
+}
+
+.citizen-v2-nav-item.active {
+    background: #2563eb;
+    color: #ffffff;
+    box-shadow: 0 8px 18px rgba(37, 99, 235, 0.35);
+}
+
+.citizen-v2-side-footer {
+    border-top: 1px solid #334155;
+    padding-top: 0.75rem;
+}
+
+.citizen-v2-side-footer .logout:hover {
+    background: rgba(239, 68, 68, 0.15);
+    color: #fca5a5;
+}
+
+.citizen-v2-content {
+    background: #f8f9fa;
+    padding: 1.6rem 2rem;
 }
 
 .citizen-page {
@@ -439,6 +512,14 @@
 
 @media (max-width: 768px) {
     .citizen-ui-content {
+        padding: 1rem;
+    }
+
+    .citizen-v2-sidebar {
+        display: none;
+    }
+
+    .citizen-v2-content {
         padding: 1rem;
     }
 
