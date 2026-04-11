@@ -1,10 +1,10 @@
-import '../../styles/dashboard.css';
-import { useState, useEffect } from 'react';
+import "../../styles/dashboard.css";
+import { useEffect, useState } from "react";
 
 function SubmitComplaint() {
-    const [category, setCategory] = useState('');
-    const [location, setLocation] = useState('');
-    const [description, setDescription] = useState('');
+    const [category, setCategory] = useState("");
+    const [location, setLocation] = useState("");
+    const [description, setDescription] = useState("");
     const [selectedFile, setSelectedFile] = useState(null);
     const [previewUrl, setPreviewUrl] = useState(null);
     const [loading, setLoading] = useState(false);
@@ -13,27 +13,32 @@ function SubmitComplaint() {
 
     useEffect(() => {
         return () => {
-            if (previewUrl) URL.revokeObjectURL(previewUrl);
+            if (previewUrl) {
+                URL.revokeObjectURL(previewUrl);
+            }
         };
     }, [previewUrl]);
 
-    const handleFileChange = (e) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
+    const handleFileChange = (event) => {
+        const file = event.target.files?.[0];
+        if (!file) {
+            return;
+        }
 
         if (file.size > 10 * 1024 * 1024) {
-            setError('File is too large (max 10 MB)');
-            e.target.value = '';
+            setError("File is too large (max 10 MB)");
+            event.target.value = "";
             return;
         }
 
         setSelectedFile(file);
         setError(null);
 
-        if (file.type.startsWith('image/')) {
-            if (previewUrl) URL.revokeObjectURL(previewUrl);
-            const url = URL.createObjectURL(file);
-            setPreviewUrl(url);
+        if (file.type.startsWith("image/")) {
+            if (previewUrl) {
+                URL.revokeObjectURL(previewUrl);
+            }
+            setPreviewUrl(URL.createObjectURL(file));
         } else {
             setPreviewUrl(null);
         }
@@ -45,19 +50,21 @@ function SubmitComplaint() {
             setPreviewUrl(null);
         }
         setSelectedFile(null);
-        const input = document.getElementById('complaint-file-input');
-        if (input) input.value = '';
+        const input = document.getElementById("complaint-file-input");
+        if (input) {
+            input.value = "";
+        }
     };
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
+    const handleSubmit = async (event) => {
+        event.preventDefault();
         setLoading(true);
         setMessage(null);
         setError(null);
 
-        const token = localStorage.getItem('access_token');
+        const token = localStorage.getItem("access_token");
         if (!token) {
-            setError('Please log in first');
+            setError("Please log in first");
             setLoading(false);
             return;
         }
@@ -65,14 +72,14 @@ function SubmitComplaint() {
         try {
             const formData = new FormData();
             const complaintData = { category, location, description };
-            formData.append('data', new Blob([JSON.stringify(complaintData)], { type: 'application/json' }));
+            formData.append("data", new Blob([JSON.stringify(complaintData)], { type: "application/json" }));
 
             if (selectedFile) {
-                formData.append('photo', selectedFile);
+                formData.append("photo", selectedFile);
             }
 
-            const response = await fetch('http://localhost:8080/api/complaints', {
-                method: 'POST',
+            const response = await fetch("http://localhost:8080/api/complaints", {
+                method: "POST",
                 headers: {
                     Authorization: `Bearer ${token}`,
                 },
@@ -90,136 +97,133 @@ function SubmitComplaint() {
             }
 
             const data = await response.json();
-            setMessage(`Complaint submitted! Reference: ${data.referenceNumber || '—'}`);
-
-            setCategory('');
-            setLocation('');
-            setDescription('');
+            setMessage(`Complaint submitted! Reference: ${data.referenceNumber || "-"}`);
+            setCategory("");
+            setLocation("");
+            setDescription("");
             clearFile();
-        } catch (err) {
-            setError(err.message || 'Failed to submit complaint');
-            console.error('Submission error:', err);
+        } catch (submissionError) {
+            setError(submissionError.message || "Failed to submit complaint");
+            console.error("Submission error:", submissionError);
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <div className="dashboard-container">
-            <h1 className="dashboard-title">Submit a Complaint</h1>
-            <p className="subtitle">Describe the issue – include photo and location if possible</p>
+        <div className="citizen-page">
+            <section className="citizen-page-header">
+                <div>
+                    <h1>Submit Complaint</h1>
+                    <p>Describe the issue, attach evidence, and send it to the municipality.</p>
+                </div>
+                <div className="citizen-chip">Citizen Report Form</div>
+            </section>
 
-            <div className="card mt-8">
-                <div className="p-6 pt-8">
-                    {message && <p className="text-green-600 mb-4 font-medium">{message}</p>}
-                    {error && <p className="text-red-600 mb-4">{error}</p>}
+            <div className="citizen-form-shell">
+                {message && <p className="text-green-600 mb-4 font-medium">{message}</p>}
+                {error && <p className="text-red-600 mb-4">{error}</p>}
 
-                    <form onSubmit={handleSubmit}>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-                            <div>
-                                <label className="block text-sm font-medium mb-2">Category</label>
-                                <select className="w-full p-3 border rounded-lg" value={category} onChange={(e) => setCategory(e.target.value)} required>
-                                    <option value="">Select category</option>
-                                    <option>Pothole / Road Damage</option>
-                                    <option>Water Leak / Burst Pipe</option>
-                                    <option>Power Outage</option>
-                                    <option>Streetlight Fault</option>
-                                    <option>Illegal Dumping</option>
-                                    <option>Sewer Overflow</option>
-                                    <option>Other</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium mb-2">Location</label>
-                                <input
-                                    type="text"
-                                    placeholder="Enter address or use current location"
-                                    className="w-full p-3 border rounded-lg"
-                                    value={location}
-                                    onChange={(e) => setLocation(e.target.value)}
-                                    required
-                                />
-                            </div>
+                <form onSubmit={handleSubmit}>
+                    <div className="citizen-form-grid">
+                        <div className="citizen-form-field">
+                            <label>Category</label>
+                            <select value={category} onChange={(event) => setCategory(event.target.value)} required>
+                                <option value="">Select category</option>
+                                <option>Pothole / Road Damage</option>
+                                <option>Water Leak / Burst Pipe</option>
+                                <option>Power Outage</option>
+                                <option>Streetlight Fault</option>
+                                <option>Illegal Dumping</option>
+                                <option>Sewer Overflow</option>
+                                <option>Other</option>
+                            </select>
                         </div>
 
-                        <div className="mb-6">
-                            <label className="block text-sm font-medium mb-2">Description</label>
-                            <textarea
-                                rows={5}
-                                placeholder="Please describe the issue in detail..."
-                                className="w-full p-3 border rounded-lg resize-y"
-                                value={description}
-                                onChange={(e) => setDescription(e.target.value)}
+                        <div className="citizen-form-field">
+                            <label>Location</label>
+                            <input
+                                type="text"
+                                placeholder="Enter address or use current location"
+                                value={location}
+                                onChange={(event) => setLocation(event.target.value)}
                                 required
                             />
                         </div>
+                    </div>
 
-                        <div className="mb-8">
-                            <label className="block text-sm font-medium mb-2">
-                                Attach Photo or Video (optional – max 10 MB)
-                            </label>
-                            <label
-                                htmlFor="complaint-file-input"
-                                className={`border-2 border-dashed rounded-xl p-10 text-center cursor-pointer transition block ${
-                                    previewUrl ? 'border-green-400 bg-green-50/40' : 'border-gray-300 hover:border-blue-400 hover:bg-blue-50/30'
-                                }`}
-                            >
-                                <input
-                                    id="complaint-file-input"
-                                    type="file"
-                                    accept="image/jpeg,image/png,image/gif,video/mp4,video/quicktime"
-                                    onChange={handleFileChange}
-                                    className="hidden"
-                                />
+                    <div className="citizen-form-field citizen-form-wide">
+                        <label>Description</label>
+                        <textarea
+                            rows={5}
+                            placeholder="Please describe the issue in detail..."
+                            value={description}
+                            onChange={(event) => setDescription(event.target.value)}
+                            required
+                        />
+                    </div>
 
-                                {!selectedFile ? (
-                                    <div>
-                                        <p className="text-gray-700 font-medium mb-1">Click here or drag & drop</p>
-                                        <p className="text-sm text-gray-500">JPG, PNG, GIF, MP4 • max 10 MB</p>
-                                    </div>
-                                ) : (
-                                    <div className="space-y-3">
-                                        <p className="text-green-700 font-medium break-all">{selectedFile.name}</p>
-                                        <p className="text-sm text-gray-500">
-                                            {(selectedFile.size / 1048576).toFixed(2)} MB
-                                        </p>
-                                        {previewUrl && (
-                                            <img
-                                                src={previewUrl}
-                                                alt="Preview"
-                                                className="max-h-48 mx-auto rounded-lg shadow-sm object-contain"
-                                            />
-                                        )}
-                                    </div>
-                                )}
-                            </label>
+                    <div className="citizen-upload-wrap">
+                        <p className="citizen-muted">Attach Photo or Video (optional - max 10 MB)</p>
+                        <label
+                            htmlFor="complaint-file-input"
+                            className={`border-2 border-dashed rounded-xl p-10 text-center cursor-pointer transition block citizen-upload-card ${
+                                previewUrl ? "border-green-400 bg-green-50/40" : "border-gray-300 hover:border-blue-400 hover:bg-blue-50/30"
+                            }`}
+                        >
+                            <input
+                                id="complaint-file-input"
+                                type="file"
+                                accept="image/jpeg,image/png,image/gif,video/mp4,video/quicktime"
+                                onChange={handleFileChange}
+                                className="hidden"
+                            />
 
-                            {selectedFile && (
-                                <div className="mt-3 text-center">
-                                    <button
-                                        type="button"
-                                        className="text-sm text-blue-600 hover:text-blue-800 underline"
-                                        onClick={clearFile}
-                                    >
-                                        Remove / Change file
-                                    </button>
+                            {!selectedFile ? (
+                                <div>
+                                    <p className="text-gray-700 font-medium mb-1">Click here or drag and drop</p>
+                                    <p className="text-sm text-gray-500">JPG, PNG, GIF, MP4 - max 10 MB</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-3">
+                                    <p className="text-green-700 font-medium break-all">{selectedFile.name}</p>
+                                    <p className="text-sm text-gray-500">{(selectedFile.size / 1048576).toFixed(2)} MB</p>
+                                    {previewUrl && (
+                                        <img
+                                            src={previewUrl}
+                                            alt="Preview"
+                                            className="max-h-48 mx-auto rounded-lg shadow-sm object-contain"
+                                        />
+                                    )}
                                 </div>
                             )}
-                        </div>
+                        </label>
 
-                        <div className="flex justify-end">
-                            <button
-                                type="submit"
-                                disabled={loading}
-                                className={`px-8 py-3 rounded-lg font-medium text-white ${
-                                    loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
-                                }`}
-                            >
-                                {loading ? 'Submitting…' : 'Submit Complaint'}
-                            </button>
-                        </div>
-                    </form>
-                </div>
+                        {selectedFile && (
+                            <div className="mt-3 text-center">
+                                <button
+                                    type="button"
+                                    className="text-sm text-blue-600 hover:text-blue-800 underline"
+                                    onClick={clearFile}
+                                >
+                                    Remove / Change file
+                                </button>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="citizen-submit-actions">
+                        <button
+                            type="submit"
+                            disabled={loading}
+                            className={`px-8 py-3 rounded-lg font-medium text-white ${
+                                loading ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"
+                            }`}
+                        >
+                            {loading ? "Submitting..." : "Submit Complaint"}
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     );
