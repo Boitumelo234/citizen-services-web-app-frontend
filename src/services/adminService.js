@@ -14,16 +14,16 @@ api.interceptors.request.use((config) => {
 });
 
 // ─── Dashboard stats (AdminDashboard + AdminOverview) ─────────────────────────
-export const getDashboardStats = () => api.get("/api/admin/dashboard");
+export const getDashboardStats = () => api.get("/admin/dashboard");
 
 // ─── Complaints ───────────────────────────────────────────────────────────────
-export const getAllComplaints   = ()             => api.get("/api/admin/complaints");
-export const getComplaintById  = (id)           => api.get(`/api/admin/complaints/${id}`);
-export const updateComplaintStatus = (id, data) => api.put(`/api/admin/complaints/${id}/status`, data);
-export const createComplaint   = (data)         => api.post("/api/admin/complaints", data);
+export const getAllComplaints   = ()             => api.get("/admin/complaints");
+export const getComplaintById  = (id)           => api.get(`/admin/complaints/${id}`);
+export const updateComplaintStatus = (id, data) => api.put(`/admin/complaints/${id}/status`, data);
+export const createComplaint   = (data)         => api.post("/admin/complaints", data);
 
 // ─── Users ────────────────────────────────────────────────────────────────────
-export const getAllUsers   = () => api.get("/api/admin/users");
-export const getUserCount = () => api.get("/api/admin/users/count");
+export const getAllUsers   = () => api.get("/admin/users");
+export const getUserCount = () => api.get("/admin/users/count");
 
 export default api;

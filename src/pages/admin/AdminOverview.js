@@ -225,14 +225,14 @@ export default function AdminOverview() {
     const fetchAll = useCallback(async () => {
         try {
             const [statsRes, dailyRes, catRes, statusRes, deptRes, alertsRes, complaintsRes, staffRes] = await Promise.all([
-                api.get("/api/admin/overview/stats"),
-                api.get("/api/admin/overview/charts/daily"),
-                api.get("/api/admin/overview/charts/by-category"),
-                api.get("/api/admin/overview/charts/by-status"),
-                api.get("/api/admin/overview/department-activity"),
-                api.get("/api/admin/overview/alerts"),
-                api.get("/api/admin/complaints"),
-                api.get("/api/admin/users"),
+                api.get("/admin/overview/stats"),
+                api.get("/admin/overview/charts/daily"),
+                api.get("/admin/overview/charts/by-category"),
+                api.get("/admin/overview/charts/by-status"),
+                api.get("/admin/overview/department-activity"),
+                api.get("/admin/overview/alerts"),
+                api.get("/admin/complaints"),
+                api.get("/admin/users"),
             ]);
             setStats(statsRes.data);
             setDaily(dailyRes.data);
