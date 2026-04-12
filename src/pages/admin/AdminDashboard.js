@@ -103,7 +103,7 @@ function ComplaintsTab() {
             if (filter.status)   params.set("status", filter.status);
             if (filter.priority) params.set("priority", filter.priority);
             if (filter.category) params.set("category", filter.category);
-            const res = await api.get(`/api/admin/complaints?${params}`);
+            const res = await api.get(`/admin/complaints?${params}`);
             setComplaints(res.data);
             setCheckedIds(new Set());
         } catch { showToast("Failed to load complaints", "error"); }
@@ -111,13 +111,13 @@ function ComplaintsTab() {
     }, [filter]);
 
     useEffect(() => { fetchComplaints(); }, [fetchComplaints]);
-    useEffect(() => { api.get("/api/admin/users?role=STAFF").then(r => setStaff(r.data)).catch(() => {}); }, []);
+    useEffect(() => { api.get("/admin/users?role=STAFF").then(r => setStaff(r.data)).catch(() => {}); }, []);
 
     const handleAssign = async (id) => {
         if (!assignStaffId) return;
         setActionLoading(true);
         try {
-            await api.put(`/api/admin/complaints/${id}/assign`, { staffId: assignStaffId });
+            await api.put(`/admin/complaints/${id}/assign`, { staffId: assignStaffId });
             showToast("Complaint assigned successfully");
             fetchComplaints(); setSelected(null);
         } catch { showToast("Failed to assign complaint", "error"); }
@@ -127,7 +127,7 @@ function ComplaintsTab() {
     const handleEscalate = async (id) => {
         setActionLoading(true);
         try {
-            await api.put(`/api/admin/complaints/${id}/escalate`);
+            await api.put(`/admin/complaints/${id}/escalate`);
             showToast("Complaint escalated to CRITICAL");
             fetchComplaints(); setSelected(null);
         } catch { showToast("Escalation failed", "error"); }
@@ -137,7 +137,7 @@ function ComplaintsTab() {
     const handleStatus = async (id, status) => {
         setActionLoading(true);
         try {
-            await api.put(`/api/admin/complaints/${id}/status`, { status });
+            await api.put(`/admin/complaints/${id}/status`, { status });
             showToast(`Status updated to ${status}`);
             fetchComplaints();
         } catch { showToast("Status update failed", "error"); }
@@ -151,7 +151,7 @@ function ComplaintsTab() {
     const bulkEscalate = async () => {
         if (checkedIds.size === 0) return;
         setActionLoading(true);
-        for (const id of checkedIds) { try { await api.put(`/api/admin/complaints/${id}/escalate`); } catch {} }
+        for (const id of checkedIds) { try { await api.put(`/admin/complaints/${id}/escalate`); } catch {} }
         showToast(`Escalated ${checkedIds.size} complaint(s)`);
         fetchComplaints(); setActionLoading(false);
     };
@@ -159,7 +159,7 @@ function ComplaintsTab() {
     const bulkResolve = async () => {
         if (checkedIds.size === 0) return;
         setActionLoading(true);
-        for (const id of checkedIds) { try { await api.put(`/api/admin/complaints/${id}/status`, { status: "RESOLVED" }); } catch {} }
+        for (const id of checkedIds) { try { await api.put(`/admin/complaints/${id}/status`, { status: "RESOLVED" }); } catch {} }
         showToast(`Resolved ${checkedIds.size} complaint(s)`);
         fetchComplaints(); setActionLoading(false);
     };
@@ -310,8 +310,8 @@ function UsersTab() {
         setLoading(true);
         try {
             const [uRes, dRes] = await Promise.all([
-                api.get(roleFilter ? `/api/admin/users?role=${roleFilter}` : "/api/admin/users"),
-                api.get("/api/admin/departments"),
+                api.get(roleFilter ? `/admin/users?role=${roleFilter}` : "/admin/users"),
+                api.get("/admin/departments"),
             ]);
             setUsers(uRes.data); setDepts(dRes.data);
         } catch { showToast("Failed to load users","error"); }
@@ -323,7 +323,7 @@ function UsersTab() {
     const handleAdd = async () => {
         setSaving(true);
         try {
-            await api.post("/api/admin/users", form);
+            await api.post("/admin/users", form);
             showToast("User created successfully");
             setShowAdd(false);
             setForm({ email:"", password:"", fullName:"", phone:"", role:"CITIZEN", departmentId:"" });
@@ -337,7 +337,7 @@ function UsersTab() {
 
     const toggleActive = async (user) => {
         try {
-            await api.put(`/api/admin/users/${user.id}`, { active: !user.active });
+            await api.put(`/admin/users/${user.id}`, { active: !user.active });
             showToast(user.active ? "Account deactivated" : "Account activated");
             fetch();
         } catch { showToast("Update failed","error"); }
@@ -345,7 +345,7 @@ function UsersTab() {
 
     const deleteUser = async (id) => {
         if (!window.confirm("Delete this user? This cannot be undone.")) return;
-        try { await api.delete(`/api/admin/users/${id}`); showToast("User deleted"); fetch(); }
+        try { await api.delete(`/admin/users/${id}`); showToast("User deleted"); fetch(); }
         catch { showToast("Delete failed","error"); }
     };
 
@@ -466,7 +466,7 @@ function DepartmentsTab() {
 
     const fetch = useCallback(async () => {
         setLoading(true);
-        try { const r = await api.get("/api/admin/departments"); setDepts(r.data); }
+        try { const r = await api.get("/admin/departments"); setDepts(r.data); }
         catch { showToast("Failed to load departments","error"); }
         setLoading(false);
     }, []);
@@ -476,7 +476,7 @@ function DepartmentsTab() {
     const handleAdd = async () => {
         setSaving(true);
         try {
-            await api.post("/api/admin/departments", form);
+            await api.post("/admin/departments", form);
             showToast("Department created");
             setShowAdd(false); setForm({ name: "", description: "" }); fetch();
         } catch { showToast("Failed to create department","error"); }
@@ -565,8 +565,8 @@ function ReportsTab() {
         setLoading(true);
         try {
             const [sRes, pRes] = await Promise.all([
-                api.get(`/api/admin/reports/summary?days=${period}`),
-                api.get("/api/admin/reports/staff-performance"),
+                api.get(`/admin/reports/summary?days=${period}`),
+                api.get("/admin/reports/staff-performance"),
             ]);
             setSummary(sRes.data); setPerf(pRes.data);
         } catch {}
