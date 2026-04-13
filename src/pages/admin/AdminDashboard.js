@@ -1,572 +1,703 @@
 import { useEffect, useState, useCallback } from "react";
-import { Link } from "react-router-dom";
-import { getDashboardStats, updateComplaintStatus, createComplaint } from "../../services/adminService";
+import api from "../../api/api";
 import "../../styles/admin.css";
 
-// ─── Animated counter hook ────────────────────────────────────────────────────
-function useCountUp(target, duration = 1200) {
-    const [value, setValue] = useState(0);
-    useEffect(() => {
-        if (!target) return;
-        let start = 0;
-        const step = target / (duration / 16);
-        const timer = setInterval(() => {
-            start += step;
-            if (start >= target) { setValue(target); clearInterval(timer); }
-            else setValue(Math.floor(start));
-        }, 16);
-        return () => clearInterval(timer);
-    }, [target, duration]);
-    return value;
+const PRIORITY_COLORS = { LOW: "#22c55e", MEDIUM: "#f59e0b", HIGH: "#f97316", CRITICAL: "#ef4444" };
+const STATUS_COLORS   = { PENDING: "#ef4444", ASSIGNED: "#f97316", IN_PROGRESS: "#3b82f6", RESOLVED: "#22c55e", DECLINED: "#8b5cf6" };
+const TABS = ["Complaints", "Users", "Departments", "Reports", "Settings"];
+
+// ── Helpers ────────────────────────────────────────────
+function timeAgo(dateStr) {
+    if (!dateStr) return "—";
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diff / 60000);
+    const hrs  = Math.floor(mins / 60);
+    const days = Math.floor(hrs / 24);
+    if (days > 0)  return `${days}d ago`;
+    if (hrs > 0)   return `${hrs}h ago`;
+    if (mins > 0)  return `${mins}m ago`;
+    return "just now";
 }
 
-// ─── Complaint Submission Modal ───────────────────────────────────────────────
-function ComplaintModal({ onClose, onSubmit }) {
-    const [form, setForm]         = useState({ category: "", description: "", area: "", priority: "Medium", citizenEmail: "" });
-    const [submitting, setSubmitting] = useState(false);
-    const [formError, setFormError]   = useState("");
+function exportCSV(data, filename) {
+    if (!data || data.length === 0) return;
+    const headers = Object.keys(data[0]);
+    const rows = data.map(row => headers.map(h => `"${row[h] ?? ""}"`).join(","));
+    const csv = [headers.join(","), ...rows].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = filename; a.click();
+    URL.revokeObjectURL(url);
+}
 
-    const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
+// ── Reusables ──────────────────────────────────────────
+function Badge({ value, colorMap }) {
+    const color = colorMap?.[value] || "#6b7280";
+    return <span className="badge" style={{ background: color + "22", color, border: `1px solid ${color}55` }}>{value}</span>;
+}
 
-    const handleSubmit = async () => {
-        if (!form.category || !form.description || !form.area || !form.citizenEmail) {
-            setFormError("All fields are required."); return;
-        }
-        setSubmitting(true); setFormError("");
-        try {
-            await onSubmit(form);
-            onClose();
-        } catch {
-            setFormError("Failed to submit. Please try again.");
-        } finally {
-            setSubmitting(false);
-        }
-    };
-
+function Modal({ title, onClose, children }) {
     return (
         <div className="modal-overlay" onClick={onClose}>
-            <div className="modal-box" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-box" onClick={e => e.stopPropagation()}>
                 <div className="modal-header">
-                    <h2>Log New Complaint</h2>
+                    <span className="modal-title">{title}</span>
                     <button className="modal-close" onClick={onClose}>✕</button>
                 </div>
-                <div className="modal-body">
-                    {formError && <div className="modal-error">{formError}</div>}
-                    <div className="form-group">
-                        <label>Citizen Email</label>
-                        <input name="citizenEmail" placeholder="citizen@email.com"
-                            value={form.citizenEmail} onChange={handleChange} className="form-input" />
-                    </div>
-                    <div className="form-group">
-                        <label>Category</label>
-                        <select name="category" value={form.category} onChange={handleChange} className="form-input">
-                            <option value="">— Select category —</option>
-                            <option>Water Services</option>
-                            <option>Roads &amp; Transport</option>
-                            <option>Electricity</option>
-                            <option>Waste Management</option>
-                        </select>
-                    </div>
-                    <div className="form-group">
-                        <label>Area</label>
-                        <select name="area" value={form.area} onChange={handleChange} className="form-input">
-                            <option value="">— Select area —</option>
-                            <option>Rustenburg CBD</option>
-                            <option>Tlhabane</option>
-                            <option>Boitekong</option>
-                            <option>Meriting</option>
-                            <option>Geelhoutpark</option>
-                            <option>Waterfall East</option>
-                        </select>
-                    </div>
-                    <div className="form-group">
-                        <label>Priority</label>
-                        <select name="priority" value={form.priority} onChange={handleChange} className="form-input">
-                            <option>Low</option>
-                            <option>Medium</option>
-                            <option>High</option>
-                        </select>
-                    </div>
-                    <div className="form-group">
-                        <label>Description</label>
-                        <textarea name="description" placeholder="Describe the complaint in detail…"
-                            value={form.description} onChange={handleChange}
-                            className="form-input form-textarea" rows={4} />
-                    </div>
-                </div>
-                <div className="modal-footer">
-                    <button className="btn-cancel" onClick={onClose}>Cancel</button>
-                    <button className="btn-submit-complaint" onClick={handleSubmit} disabled={submitting}>
-                        {submitting ? "Submitting…" : "Submit Complaint"}
-                    </button>
-                </div>
+                <div className="modal-body">{children}</div>
             </div>
         </div>
     );
 }
 
-// ─── Complaint Detail Drawer ──────────────────────────────────────────────────
-function ComplaintDrawer({ complaint, onClose, onStatusUpdate }) {
-    // ✅ ALL hooks declared BEFORE the early return — fixes the ESLint error
-    const [newStatus, setNewStatus] = useState("");
-    const [saving, setSaving]       = useState(false);
-
-    // Sync newStatus when complaint changes
-    useEffect(() => {
-        if (complaint) setNewStatus(complaint.status);
-    }, [complaint]);
-
-    // ✅ Early return AFTER hooks
-    if (!complaint) return null;
-
-    const handleSave = async () => {
-        setSaving(true);
-        await onStatusUpdate(complaint.id, newStatus);
-        setSaving(false);
-        onClose();
-    };
-
-    const formatDate = (d) => d ? new Date(d).toLocaleString("en-ZA") : "—";
-
-    const getStatusBadge = (st) => ({
-        "New": "badge badge-new",
-        "In Progress": "badge badge-inprogress",
-        "Resolved": "badge badge-resolved",
-        "Rejected": "badge badge-rejected"
-    }[st] || "badge");
-
+// ── Complaint Timeline ─────────────────────────────────
+function ComplaintTimeline({ complaint }) {
+    const steps = [
+        { key: "createdAt",  label: "Submitted",   icon: "📋", color: "#6366f1" },
+        { key: "updatedAt",  label: "Last Updated", icon: "⚙️", color: "#3b82f6" },
+        { key: "resolvedAt", label: "Resolved",    icon: "✅", color: "#22c55e" },
+    ];
     return (
-        <div className="drawer-overlay" onClick={onClose}>
-            <div className="drawer-panel" onClick={(e) => e.stopPropagation()}>
-                <div className="drawer-header">
-                    <div>
-                        <span className="drawer-ref">{complaint.referenceNumber}</span>
-                        <h2 className="drawer-title">{complaint.category}</h2>
+        <div className="timeline">
+            {steps.map((s, i) => {
+                const date = complaint[s.key];
+                const active = !!date;
+                return (
+                    <div key={i} className={`timeline-step ${active ? "done" : "pending"}`}>
+                        <div className="timeline-icon" style={{ borderColor: active ? s.color : "#2d3748", background: active ? s.color + "22" : "transparent" }}>
+                            {s.icon}
+                        </div>
+                        <div className="timeline-info">
+                            <div className="timeline-label">{s.label}</div>
+                            <div className="timeline-date">
+                                {active ? new Date(date).toLocaleString() : "—"}
+                            </div>
+                        </div>
+                        {i < steps.length - 1 && <div className={`timeline-line ${active ? "active" : ""}`} />}
                     </div>
-                    <button className="modal-close" onClick={onClose}>✕</button>
-                </div>
-                <div className="drawer-body">
-                    <div className="drawer-row">
-                        <span className="drawer-label">Status</span>
-                        <span className={getStatusBadge(complaint.status)}>{complaint.status}</span>
-                    </div>
-                    <div className="drawer-row">
-                        <span className="drawer-label">Priority</span>
-                        <span className={`priority priority-${complaint.priority?.toLowerCase()}`}>{complaint.priority}</span>
-                    </div>
-                    <div className="drawer-row">
-                        <span className="drawer-label">Area</span>
-                        <span>{complaint.area}</span>
-                    </div>
-                    <div className="drawer-row">
-                        <span className="drawer-label">Assigned To</span>
-                        <span>{complaint.assignedTo || <em>Unassigned</em>}</span>
-                    </div>
-                    <div className="drawer-row">
-                        <span className="drawer-label">Submitted</span>
-                        <span>{formatDate(complaint.createdAt)}</span>
-                    </div>
-                    <div className="drawer-divider"></div>
-                    <div className="drawer-label" style={{ marginBottom: 8 }}>Update Status</div>
-                    <select className="form-input" value={newStatus}
-                        onChange={(e) => setNewStatus(e.target.value)}>
-                        <option>New</option>
-                        <option>In Progress</option>
-                        <option>Resolved</option>
-                        <option>Rejected</option>
-                    </select>
-                </div>
-                <div className="modal-footer">
-                    <button className="btn-cancel" onClick={onClose}>Close</button>
-                    <button className="btn-submit-complaint" onClick={handleSave} disabled={saving}>
-                        {saving ? "Saving…" : "Save Status"}
-                    </button>
-                </div>
-            </div>
+                );
+            })}
         </div>
     );
 }
 
-// ─── Main AdminDashboard ──────────────────────────────────────────────────────
-function AdminDashboard() {
-    const [stats, setStats]               = useState(null);
-    const [loading, setLoading]           = useState(true);
-    const [error, setError]               = useState(null);
-    const [alertDismissed, setAlertDismissed] = useState(false);
-    const [darkMode, setDarkMode]         = useState(() => localStorage.getItem("rlm-dark") === "true");
-    const [currentTime, setCurrentTime]   = useState(new Date());
-    const [lastUpdated, setLastUpdated]   = useState(null);
-    const [searchQuery, setSearchQuery]   = useState("");
-    const [isRefreshing, setIsRefreshing] = useState(false);
-    const [showModal, setShowModal]       = useState(false);
-    const [selectedComplaint, setSelectedComplaint] = useState(null);
-    const [dateFrom, setDateFrom]         = useState("");
-    const [dateTo, setDateTo]             = useState("");
+// ── COMPLAINTS TAB ─────────────────────────────────────
+function ComplaintsTab() {
+    const [complaints, setComplaints]   = useState([]);
+    const [loading, setLoading]         = useState(true);
+    const [filter, setFilter]           = useState({ status: "", priority: "", category: "" });
+    const [selected, setSelected]       = useState(null);
+    const [staff, setStaff]             = useState([]);
+    const [assignStaffId, setAssignStaffId] = useState("");
+    const [actionLoading, setActionLoading] = useState(false);
+    const [toast, setToast]             = useState(null);
+    const [checkedIds, setCheckedIds]   = useState(new Set());
 
-    useEffect(() => {
-        document.body.classList.toggle("rlm-dark", darkMode);
-        localStorage.setItem("rlm-dark", darkMode);
-    }, [darkMode]);
+    const showToast = (msg, type = "success") => { setToast({ msg, type }); setTimeout(() => setToast(null), 3000); };
 
-    useEffect(() => {
-        const tick = setInterval(() => setCurrentTime(new Date()), 1000);
-        return () => clearInterval(tick);
-    }, []);
-
-    const fetchStats = useCallback(async (showSpinner = false) => {
-        if (showSpinner) setIsRefreshing(true);
+    const fetchComplaints = useCallback(async () => {
+        setLoading(true);
         try {
-            const res = await getDashboardStats();
-            setStats(res.data);
-            setLastUpdated(new Date());
-            setError(null);
-        } catch {
-            setError("Failed to load dashboard data. Is the server running?");
-        } finally {
-            setLoading(false);
-            setIsRefreshing(false);
-        }
-    }, []);
+            const params = new URLSearchParams();
+            if (filter.status)   params.set("status", filter.status);
+            if (filter.priority) params.set("priority", filter.priority);
+            if (filter.category) params.set("category", filter.category);
+            const res = await api.get(`/admin/complaints?${params}`);
+            setComplaints(res.data);
+            setCheckedIds(new Set());
+        } catch { showToast("Failed to load complaints", "error"); }
+        setLoading(false);
+    }, [filter]);
 
-    useEffect(() => {
-        fetchStats();
-        const interval = setInterval(() => fetchStats(), 60000);
-        return () => clearInterval(interval);
-    }, [fetchStats]);
+    useEffect(() => { fetchComplaints(); }, [fetchComplaints]);
+    useEffect(() => { api.get("/admin/users?role=STAFF").then(r => setStaff(r.data)).catch(() => {}); }, []);
 
-    // ✅ All useCountUp hooks called unconditionally at top level
-    const animTotal    = useCountUp(stats?.totalComplaints    ?? 0);
-    const animOpen     = useCountUp(stats?.openComplaints     ?? 0);
-    const animResolved = useCountUp(stats?.resolvedThisMonth  ?? 0);
-    const animAvg      = useCountUp(stats?.avgResolutionDays  ?? 0);
-
-    const handleRefresh       = () => fetchStats(true);
-    const handlePrint         = () => window.print();
-    const handleNewComplaint  = async (formData) => { await createComplaint(formData); fetchStats(); };
-    const handleStatusUpdate  = async (id, newStatus) => { await updateComplaintStatus(id, { status: newStatus }); fetchStats(); };
-
-    const formatTime  = (d) => d.toLocaleTimeString("en-ZA",  { hour: "2-digit", minute: "2-digit", second: "2-digit" });
-    const formatDate  = (d) => d.toLocaleDateString("en-ZA",  { weekday: "long", day: "2-digit", month: "long", year: "numeric" });
-    const formatShort = (s) => s ? new Date(s).toLocaleDateString("en-ZA", { day: "2-digit", month: "short", year: "numeric" }) : "—";
-    const timeAgo = (d) => {
-        if (!d) return "Never";
-        const s = Math.floor((new Date() - d) / 1000);
-        if (s < 10) return "Just now"; if (s < 60) return `${s}s ago`;
-        if (s < 3600) return `${Math.floor(s / 60)}m ago`;
-        return `${Math.floor(s / 3600)}h ago`;
-    };
-    const getStatusBadge   = (st) => ({ "New": "badge badge-new", "In Progress": "badge badge-inprogress", "Resolved": "badge badge-resolved", "Rejected": "badge badge-rejected" }[st] || "badge");
-    const getPriorityBadge = (p)  => ({ "High": "priority priority-high", "Medium": "priority priority-medium", "Low": "priority priority-low" }[p] || "priority");
-    const getSlaClass      = (sla) => sla >= 80 ? "sla-good" : sla >= 60 ? "sla-warn" : "sla-bad";
-
-    const filterByDate = (list) => {
-        if (!list) return [];
-        return list.filter((c) => {
-            const created = new Date(c.createdAt);
-            if (dateFrom && created < new Date(dateFrom)) return false;
-            if (dateTo   && created > new Date(dateTo + "T23:59:59")) return false;
-            return true;
-        });
+    const handleAssign = async (id) => {
+        if (!assignStaffId) return;
+        setActionLoading(true);
+        try {
+            await api.put(`/admin/complaints/${id}/assign`, { staffId: assignStaffId });
+            showToast("Complaint assigned successfully");
+            fetchComplaints(); setSelected(null);
+        } catch { showToast("Failed to assign complaint", "error"); }
+        setActionLoading(false);
     };
 
-    const filteredComplaints = filterByDate(
-        (stats?.recentComplaints || []).filter((c) => {
-            if (!searchQuery.trim()) return true;
-            const q = searchQuery.toLowerCase();
-            return c.referenceNumber?.toLowerCase().includes(q) ||
-                   c.category?.toLowerCase().includes(q) ||
-                   c.area?.toLowerCase().includes(q) ||
-                   c.status?.toLowerCase().includes(q);
-        })
-    );
+    const handleEscalate = async (id) => {
+        setActionLoading(true);
+        try {
+            await api.put(`/admin/complaints/${id}/escalate`);
+            showToast("Complaint escalated to CRITICAL");
+            fetchComplaints(); setSelected(null);
+        } catch { showToast("Escalation failed", "error"); }
+        setActionLoading(false);
+    };
 
-    const sortedDepts = stats?.departmentPerformance
-        ? [...stats.departmentPerformance].sort((a, b) => b.slaCompliance - a.slaCompliance)
-        : [];
-    const topDept    = sortedDepts[0]?.department;
-    const bottomDept = sortedDepts[sortedDepts.length - 1]?.department;
+    const handleStatus = async (id, status) => {
+        setActionLoading(true);
+        try {
+            await api.put(`/admin/complaints/${id}/status`, { status });
+            showToast(`Status updated to ${status}`);
+            fetchComplaints();
+        } catch { showToast("Status update failed", "error"); }
+        setActionLoading(false);
+    };
 
-    if (loading) return <div className="dash-loading"><div className="dash-spinner"></div><p>Loading dashboard…</p></div>;
-    if (error)   return <div className="dash-error">{error}</div>;
+    // Bulk actions
+    const toggleCheck = (id) => setCheckedIds(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
+    const toggleAll   = () => setCheckedIds(checkedIds.size === complaints.length ? new Set() : new Set(complaints.map(c => c.id)));
 
-    // ✅ Only destructure what is actually used — removed openComplaints and avgResolutionDays
-    const { totalComplaints, resolvedComplaints, pendingComplaints,
-            newThisMonth, resolvedThisMonth, newThisWeek,
-            statusDistribution, departmentPerformance, complaintsByArea } = stats;
+    const bulkEscalate = async () => {
+        if (checkedIds.size === 0) return;
+        setActionLoading(true);
+        for (const id of checkedIds) { try { await api.put(`/admin/complaints/${id}/escalate`); } catch {} }
+        showToast(`Escalated ${checkedIds.size} complaint(s)`);
+        fetchComplaints(); setActionLoading(false);
+    };
 
-    const slaAlert = departmentPerformance?.find(d => d.slaCompliance < 80);
+    const bulkResolve = async () => {
+        if (checkedIds.size === 0) return;
+        setActionLoading(true);
+        for (const id of checkedIds) { try { await api.put(`/admin/complaints/${id}/status`, { status: "RESOLVED" }); } catch {} }
+        showToast(`Resolved ${checkedIds.size} complaint(s)`);
+        fetchComplaints(); setActionLoading(false);
+    };
+
+    // Staff workload map
+    const workloadMap = {};
+    complaints.forEach(c => {
+        if (c.assignedToId && c.status !== "RESOLVED") workloadMap[c.assignedToId] = (workloadMap[c.assignedToId] || 0) + 1;
+    });
 
     return (
-        <div className="admin-dashboard">
-
-            {showModal && (
-                <ComplaintModal onClose={() => setShowModal(false)} onSubmit={handleNewComplaint} />
-            )}
-            {selectedComplaint && (
-                <ComplaintDrawer
-                    complaint={selectedComplaint}
-                    onClose={() => setSelectedComplaint(null)}
-                    onStatusUpdate={handleStatusUpdate}
-                />
-            )}
-
-            {/* ── Header ── */}
-            <div className="dash-header">
-                <div className="dash-header-left">
-                    <span className="dash-greeting">Good morning, Administrator</span>
-                    <h1 className="dash-title">Control Centre Dashboard</h1>
-                    <div className="dash-clock">
-                        <span className="clock-time">{formatTime(currentTime)}</span>
-                        <span className="clock-date">{formatDate(currentTime)}</span>
-                    </div>
+        <div className="tab-content">
+            {toast && <div className={`toast toast-${toast.type}`}>{toast.msg}</div>}
+            <div className="tab-toolbar">
+                <div className="filters">
+                    {[["status","Status","PENDING,ASSIGNED,IN_PROGRESS,RESOLVED,DECLINED"],
+                        ["priority","Priority","LOW,MEDIUM,HIGH,CRITICAL"],
+                        ["category","Category","TRANSPORT,WATER,ELECTRICITY,WASTE"]
+                    ].map(([key, label, opts]) => (
+                        <select key={key} value={filter[key]}
+                                onChange={e => setFilter(f => ({ ...f, [key]: e.target.value }))}
+                                className="filter-select">
+                            <option value="">{label}: All</option>
+                            {opts.split(",").map(o => <option key={o} value={o}>{o}</option>)}
+                        </select>
+                    ))}
+                    <button className="btn-outline" onClick={fetchComplaints}>↻ Reload</button>
                 </div>
-                <div className="dash-header-controls">
-                    <div className="refresh-wrapper">
-                        <button className={`btn-refresh ${isRefreshing ? "refreshing" : ""}`} onClick={handleRefresh}>
-                            <span className="refresh-icon">↻</span>
-                            {isRefreshing ? "Refreshing…" : "Refresh"}
-                        </button>
-                        <span className="last-updated">Updated: {timeAgo(lastUpdated)}</span>
-                    </div>
-                    <button className="btn-print no-print" onClick={handlePrint}>🖨 Print / PDF</button>
-                    <button className="btn-darkmode no-print" onClick={() => setDarkMode(!darkMode)}>
-                        {darkMode ? "☀ Light" : "🌙 Dark"}
-                    </button>
-                    <button className="btn-new-complaint no-print" onClick={() => setShowModal(true)}>
-                        + New Complaint
-                    </button>
-                </div>
-            </div>
-
-            {/* ── SLA Alert ── */}
-            {slaAlert && !alertDismissed && (
-                <div className="sla-alert-banner no-print">
-                    <span className="sla-alert-icon">⚠</span>
-                    <span>
-                        <strong>SLA Alert</strong> — {slaAlert.department} is at {slaAlert.slaCompliance}% SLA compliance (below 80% target).{" "}
-                        <Link to="/admin/complaints">View complaints →</Link>
-                    </span>
-                    <button className="sla-alert-dismiss" onClick={() => setAlertDismissed(true)}>✕</button>
-                </div>
-            )}
-
-            {/* ── KPI Cards ── */}
-            <div className="kpi-grid">
-                <div className="kpi-card kpi-total">
-                    <div className="kpi-icon">📋</div>
-                    <div className="kpi-body">
-                        <span className="kpi-label">TOTAL COMPLAINTS</span>
-                        <span className="kpi-value">{animTotal}</span>
-                        <span className="kpi-sub">+{newThisMonth} this month</span>
-                    </div>
-                </div>
-                <div className="kpi-card kpi-open">
-                    <div className="kpi-icon">🔓</div>
-                    <div className="kpi-body">
-                        <span className="kpi-label">OPEN</span>
-                        <span className="kpi-value">{animOpen}</span>
-                        <span className="kpi-sub">{pendingComplaints} still pending</span>
-                    </div>
-                </div>
-                <div className="kpi-card kpi-resolved">
-                    <div className="kpi-icon">✅</div>
-                    <div className="kpi-body">
-                        <span className="kpi-label">RESOLVED THIS MONTH</span>
-                        <span className="kpi-value">{animResolved}</span>
-                        <span className="kpi-sub">{resolvedComplaints} total resolved</span>
-                    </div>
-                </div>
-                <div className="kpi-card kpi-sla">
-                    <div className="kpi-icon">⏱</div>
-                    <div className="kpi-body">
-                        <span className="kpi-label">AVG RESOLUTION</span>
-                        <span className="kpi-value">{animAvg}d</span>
-                        <span className="kpi-sub">{newThisWeek} new this week</span>
-                    </div>
-                </div>
-            </div>
-
-            {/* ── Status + VS ── */}
-            <div className="dash-middle">
-                <div className="dash-card">
-                    <div className="dash-card-header">
-                        <h3>Status Distribution</h3>
-                        <span className="card-badge">This Month</span>
-                    </div>
-                    <div className="status-donut-wrapper">
-                        <div className="status-donut">
-                            <span className="donut-center-label">{totalComplaints}</span>
-                            <span className="donut-center-sub">Total</span>
+                <div className="toolbar-right">
+                    {checkedIds.size > 0 && (
+                        <div className="bulk-actions">
+                            <span className="bulk-count">{checkedIds.size} selected</span>
+                            <button className="btn-action escalate" onClick={bulkEscalate} disabled={actionLoading}>🔴 Escalate All</button>
+                            <button className="btn-action resolve"  onClick={bulkResolve}  disabled={actionLoading}>✅ Resolve All</button>
                         </div>
-                        <div className="status-legend">
-                            {statusDistribution?.map((s) => (
-                                <div key={s.status} className="legend-item">
-                                    <span className={`legend-dot dot-${s.status?.toLowerCase().replace(" ", "-")}`}></span>
-                                    <span className="legend-label">{s.status}</span>
-                                    <span className="legend-count">{s.count}</span>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                    <div className="status-bars">
-                        {statusDistribution?.map((s) => (
-                            <div key={s.status} className="status-bar-row">
-                                <span className="status-bar-name">{s.status}</span>
-                                <div className="status-bar-track">
-                                    <div className={`status-bar-fill fill-${s.status?.toLowerCase().replace(" ", "-")}`}
-                                        style={{ width: `${totalComplaints ? (s.count / totalComplaints) * 100 : 0}%` }}></div>
-                                </div>
-                                <span className="status-bar-count">{s.count}</span>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-                <div className="dash-card">
-                    <div className="dash-card-header">
-                        <h3>New vs Resolved</h3>
-                        <span className="card-badge">This Month</span>
-                    </div>
-                    <div className="vs-chart">
-                        {[
-                            { label: "New",      count: newThisMonth,      cls: "vs-new" },
-                            { label: "Resolved", count: resolvedThisMonth, cls: "vs-resolved" },
-                            { label: "Pending",  count: pendingComplaints, cls: "vs-pending" },
-                        ].map((item) => (
-                            <div key={item.label} className="vs-bar-group">
-                                <div className="vs-label">{item.label}</div>
-                                <div className="vs-track">
-                                    <div className={`vs-fill ${item.cls}`}
-                                        style={{ width: `${totalComplaints ? (item.count / totalComplaints) * 100 : 0}%` }}></div>
-                                </div>
-                                <div className="vs-count">{item.count}</div>
-                            </div>
-                        ))}
-                    </div>
+                    )}
+                    <button className="btn-outline" onClick={() => exportCSV(complaints, "complaints.csv")}>⬇ Export CSV</button>
+                    <div className="count-badge">{complaints.length} complaint{complaints.length !== 1 ? "s" : ""}</div>
                 </div>
             </div>
 
-            {/* ── Department Performance ── */}
-            <div className="dash-card full-width">
-                <div className="dash-card-header">
-                    <h3>Department Performance</h3>
-                    <div className="dept-legend">
-                        <span className="dept-legend-item top">🏆 Top: {topDept}</span>
-                        <span className="dept-legend-item bottom">⚠ Needs attention: {bottomDept}</span>
-                    </div>
-                </div>
-                <div className="table-scroll">
-                    <table className="dept-table">
+            {loading ? <div className="tab-loading">Loading complaints…</div> : (
+                <div className="table-wrap">
+                    <table className="data-table">
                         <thead>
-                            <tr>
-                                <th>Department</th><th>Submitted</th><th>Resolved</th>
-                                <th>In Progress</th><th>Pending</th><th>SLA Compliance</th><th>Performance</th>
-                            </tr>
+                        <tr>
+                            <th><input type="checkbox" onChange={toggleAll} checked={checkedIds.size === complaints.length && complaints.length > 0} /></th>
+                            <th>#ID</th><th>Title</th><th>Category</th><th>Area</th>
+                            <th>Priority</th><th>Status</th><th>Assigned To</th><th>Age</th><th>Actions</th>
+                        </tr>
                         </thead>
                         <tbody>
-                            {departmentPerformance?.length === 0 && (
-                                <tr><td colSpan="7" className="empty-row">No department data yet.</td></tr>
-                            )}
-                            {departmentPerformance?.map((dept) => (
-                                <tr key={dept.department}
-                                    className={dept.department === topDept ? "row-top" : dept.department === bottomDept ? "row-bottom" : ""}>
-                                    <td className="dept-name">
-                                        {dept.department === topDept    && <span className="dept-badge">🏆 </span>}
-                                        {dept.department === bottomDept && <span className="dept-badge">⚠ </span>}
-                                        {dept.department}
-                                    </td>
-                                    <td>{dept.total}</td>
-                                    <td className="text-green">{dept.resolved}</td>
-                                    <td className="text-blue">{dept.inProgress}</td>
-                                    <td className="text-orange">{dept.pending}</td>
-                                    <td><span className={getSlaClass(dept.slaCompliance)}>{dept.slaCompliance}%</span></td>
-                                    <td>
-                                        <div className="perf-bar-track">
-                                            <div className={`perf-bar-fill ${getSlaClass(dept.slaCompliance)}-bar`}
-                                                style={{ width: `${dept.slaCompliance}%` }}></div>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))}
+                        {complaints.length === 0 && (
+                            <tr><td colSpan={10} className="empty-row">No complaints match the current filters</td></tr>
+                        )}
+                        {complaints.map(c => (
+                            <tr key={c.id} className={checkedIds.has(c.id) ? "row-checked" : ""}>
+                                <td><input type="checkbox" checked={checkedIds.has(c.id)} onChange={() => toggleCheck(c.id)} /></td>
+                                <td className="mono">#{c.id}</td>
+                                <td className="complaint-title">{c.title}</td>
+                                <td><Badge value={c.category} colorMap={{ TRANSPORT:"#f59e0b", WATER:"#3b82f6", ELECTRICITY:"#eab308", WASTE:"#22c55e" }} /></td>
+                                <td>{c.area}</td>
+                                <td><Badge value={c.priority} colorMap={PRIORITY_COLORS} /></td>
+                                <td><Badge value={c.status}   colorMap={STATUS_COLORS} /></td>
+                                <td className="small">{c.assignedToName || <span className="unassigned-text">Unassigned</span>}</td>
+                                <td className="mono small age-cell">{timeAgo(c.createdAt)}</td>
+                                <td>
+                                    <div className="action-btns">
+                                        <button className="act-btn view"     onClick={() => setSelected(c)}              title="View & Manage">👁</button>
+                                        <button className="act-btn escalate" onClick={() => handleEscalate(c.id)}        title="Escalate">🔴</button>
+                                        {c.status !== "RESOLVED" && <button className="act-btn resolve" onClick={() => handleStatus(c.id, "RESOLVED")} title="Resolve">✅</button>}
+                                    </div>
+                                </td>
+                            </tr>
+                        ))}
                         </tbody>
                     </table>
                 </div>
-            </div>
+            )}
 
-            {/* ── Recent Complaints ── */}
-            <div className="dash-bottom">
-                <div className="dash-card recent-card">
-                    <div className="dash-card-header">
-                        <h3>Recent Complaints</h3>
-                        <Link to="/admin/complaints" className="view-all-link">View all →</Link>
+            {selected && (
+                <Modal title={`Complaint #${selected.id} — ${selected.title}`} onClose={() => { setSelected(null); setAssignStaffId(""); }}>
+                    <div className="detail-grid">
+                        <div><label>Category</label><Badge value={selected.category} colorMap={{ TRANSPORT:"#f59e0b", WATER:"#3b82f6", ELECTRICITY:"#eab308", WASTE:"#22c55e" }} /></div>
+                        <div><label>Priority</label><Badge value={selected.priority} colorMap={PRIORITY_COLORS} /></div>
+                        <div><label>Status</label><Badge value={selected.status} colorMap={STATUS_COLORS} /></div>
+                        <div><label>Area</label><span>{selected.area}</span></div>
+                        <div><label>Citizen</label><span>{selected.citizenName || selected.citizenEmail || "—"}</span></div>
+                        <div><label>Department</label><span>{selected.departmentName || "—"}</span></div>
+                        <div className="full"><label>Description</label><p className="desc-text">{selected.description || "No description provided."}</p></div>
+                        {selected.latitude && <div><label>Location</label><span className="mono">{selected.latitude.toFixed(4)}, {selected.longitude?.toFixed(4)}</span></div>}
                     </div>
 
-                    <div className="date-filter-row no-print">
-                        <span className="date-filter-label">Filter by date:</span>
-                        <input type="date" className="date-input" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
-                        <span className="date-sep">to</span>
-                        <input type="date" className="date-input" value={dateTo}   onChange={(e) => setDateTo(e.target.value)} />
-                        {(dateFrom || dateTo) && (
-                            <button className="search-clear" onClick={() => { setDateFrom(""); setDateTo(""); }}>✕ Clear</button>
+                    {/* Timeline */}
+                    <div className="modal-section">
+                        <div className="section-label">📅 Complaint Timeline</div>
+                        <ComplaintTimeline complaint={selected} />
+                    </div>
+
+                    {/* Assign — with workload indicator */}
+                    <div className="modal-section">
+                        <div className="section-label">🔧 Assign to Staff</div>
+                        <div className="assign-row">
+                            <select className="filter-select" value={assignStaffId} onChange={e => setAssignStaffId(e.target.value)}>
+                                <option value="">Select staff member…</option>
+                                {staff.map(s => {
+                                    const load = workloadMap[s.id] || 0;
+                                    const indicator = load >= 5 ? "⚠️ Busy" : load >= 3 ? "🟡" : "✅";
+                                    return (
+                                        <option key={s.id} value={s.id}>
+                                            {indicator} {s.fullName || s.email} ({load} active) {s.departmentName ? `— ${s.departmentName}` : ""}
+                                        </option>
+                                    );
+                                })}
+                            </select>
+                            <button className="btn-primary" disabled={!assignStaffId || actionLoading} onClick={() => handleAssign(selected.id)}>
+                                {actionLoading ? "Assigning…" : "Assign"}
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="modal-section">
+                        <div className="section-label">⚡ Quick Actions</div>
+                        <div className="quick-actions">
+                            <button className="btn-action escalate"   onClick={() => handleEscalate(selected.id)}                          disabled={actionLoading}>🔴 Escalate to Critical</button>
+                            <button className="btn-action resolve"    onClick={() => handleStatus(selected.id, "RESOLVED")}                 disabled={actionLoading}>✅ Mark Resolved</button>
+                            <button className="btn-action inprogress" onClick={() => handleStatus(selected.id, "IN_PROGRESS")}              disabled={actionLoading}>⚙ Set In Progress</button>
+                        </div>
+                    </div>
+                </Modal>
+            )}
+        </div>
+    );
+}
+
+function UsersTab() {
+    const [users, setUsers]       = useState([]);
+    const [departments, setDepts] = useState([]);
+    const [loading, setLoading]   = useState(true);
+    const [roleFilter, setRole]   = useState("");
+    const [showAdd, setShowAdd]   = useState(false);
+    const [form, setForm]         = useState({ email:"", password:"", fullName:"", phone:"", role:"CITIZEN", departmentId:"" });
+    const [saving, setSaving]     = useState(false);
+    const [toast, setToast]       = useState(null);
+    const showToast = (msg, type="success") => { setToast({msg,type}); setTimeout(()=>setToast(null),3000); };
+
+    const fetch = useCallback(async () => {
+        setLoading(true);
+        try {
+            const [uRes, dRes] = await Promise.all([
+                api.get(roleFilter ? `/admin/users?role=${roleFilter}` : "/admin/users"),
+                api.get("/admin/departments"),
+            ]);
+            setUsers(uRes.data); setDepts(dRes.data);
+        } catch { showToast("Failed to load users","error"); }
+        setLoading(false);
+    }, [roleFilter]);
+
+    useEffect(() => { fetch(); }, [fetch]);
+
+    const handleAdd = async () => {
+        setSaving(true);
+        try {
+            await api.post("/admin/users", form);
+            showToast("User created successfully");
+            setShowAdd(false);
+            setForm({ email:"", password:"", fullName:"", phone:"", role:"CITIZEN", departmentId:"" });
+            fetch();
+        } catch (err) {
+            console.error(err);
+            showToast(err.response?.data?.message || "Failed to create user","error");
+        }
+        setSaving(false);
+    };
+
+    const toggleActive = async (user) => {
+        try {
+            await api.put(`/admin/users/${user.id}`, { active: !user.active });
+            showToast(user.active ? "Account deactivated" : "Account activated");
+            fetch();
+        } catch { showToast("Update failed","error"); }
+    };
+
+    const deleteUser = async (id) => {
+        if (!window.confirm("Delete this user? This cannot be undone.")) return;
+        try { await api.delete(`/admin/users/${id}`); showToast("User deleted"); fetch(); }
+        catch { showToast("Delete failed","error"); }
+    };
+
+    return (
+        <div className="tab-content">
+            {toast && <div className={`toast toast-${toast.type}`}>{toast.msg}</div>}
+            <div className="tab-toolbar">
+                <div className="filters">
+                    <select className="filter-select" value={roleFilter} onChange={e => setRole(e.target.value)}>
+                        <option value="">All Roles</option>
+                        <option value="ADMIN">Admin</option>
+                        <option value="STAFF">Staff</option>
+                        <option value="CITIZEN">Citizen</option>
+                    </select>
+                    <button className="btn-outline" onClick={fetch}>↻ Reload</button>
+                </div>
+                <div className="toolbar-right">
+                    <button className="btn-outline" onClick={() => exportCSV(users, "users.csv")}>⬇ Export CSV</button>
+                    <button className="btn-primary" onClick={() => setShowAdd(true)}>+ Add User</button>
+                </div>
+            </div>
+
+            {loading ? <div className="tab-loading">Loading users…</div> : (
+                <div className="table-wrap">
+                    <table className="data-table">
+                        <thead>
+                        <tr><th>ID</th><th>Name</th><th>Email</th><th>Role</th><th>Department</th><th>Status</th><th>Actions</th></tr>
+                        </thead>
+                        <tbody>
+                        {users.length === 0 && <tr><td colSpan={7} className="empty-row">No users found</td></tr>}
+                        {users.map(u => (
+                            <tr key={u.id}>
+                                <td className="mono">#{u.id}</td>
+                                <td>{u.fullName || "—"}</td>
+                                <td className="small">{u.email}</td>
+                                <td><Badge value={u.role} colorMap={{ ADMIN:"#ef4444", STAFF:"#f97316", CITIZEN:"#3b82f6" }} /></td>
+                                <td>{u.departmentName || "—"}</td>
+                                <td><span className={`status-pill ${u.active ? "active" : "inactive"}`}>{u.active ? "Active" : "Inactive"}</span></td>
+                                <td>
+                                    <div className="action-btns">
+                                        <button className="act-btn" onClick={() => toggleActive(u)} title={u.active ? "Deactivate" : "Activate"}>
+                                            {u.active ? "🔴" : "🟢"}
+                                        </button>
+                                        <button className="act-btn delete" onClick={() => deleteUser(u.id)} title="Delete">🗑</button>
+                                    </div>
+                                </td>
+                            </tr>
+                        ))}
+                        </tbody>
+                    </table>
+                </div>
+            )}
+
+            {showAdd && (
+                <Modal title="Add New User" onClose={() => setShowAdd(false)}>
+                    <div className="form-grid">
+                        {[["fullName","Full Name","text"],["email","Email","email"],["password","Password","password"],["phone","Phone","text"]].map(([k,l,t]) => (
+                            <div key={k} className="form-field">
+                                <label>{l}</label>
+                                <input type={t} value={form[k]} onChange={e => setForm(f => ({...f,[k]:e.target.value}))} className="form-input" />
+                            </div>
+                        ))}
+
+                        <div className="form-field">
+                            <label>Role</label>
+                            <select className="form-input" value={form.role} onChange={e => setForm(f => ({...f,role:e.target.value}))}>
+                                <option value="">Select role</option>
+                                <option value="STAFF">Staff</option>
+                                <option value="ADMIN">Admin</option>
+                            </select>
+                        </div>
+
+                        {form.role === "STAFF" && (
+                            <div className="form-field">
+                                <label>Department</label>
+                                <select className="form-input" value={form.departmentId} onChange={e => setForm(f => ({...f,departmentId:e.target.value}))}>
+                                    <option value="">Select department…</option>
+                                    {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                                </select>
+                            </div>
                         )}
                     </div>
 
-                    <div className="search-wrapper no-print">
-                        <span className="search-icon">🔍</span>
-                        <input type="text" className="search-input"
-                            placeholder="Search by ref, category, area or status…"
-                            value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
-                        {searchQuery && <button className="search-clear" onClick={() => setSearchQuery("")}>✕</button>}
-                    </div>
+                    <div className="modal-footer">
+                        <button className="btn-outline" onClick={() => setShowAdd(false)}>Cancel</button>
 
-                    {(searchQuery || dateFrom || dateTo) && (
-                        <span className="filter-count">{filteredComplaints.length} result{filteredComplaints.length !== 1 ? "s" : ""} found</span>
+                        <button
+                            className="btn-primary"
+                            onClick={handleAdd}
+                            disabled={
+                                saving ||
+                                !form.fullName ||
+                                !form.email ||
+                                !form.password ||
+                                !form.phone ||
+                                !form.role ||
+                                (form.role === "STAFF" && !form.departmentId)
+                            }
+                        >
+                            {saving ? "Creating…" : "Create User"}
+                        </button>
+                    </div>
+                </Modal>
+            )}
+        </div>
+    );
+}
+
+// ── DEPARTMENTS TAB ────────────────────────────────────
+function DepartmentsTab() {
+    const [departments, setDepts] = useState([]);
+    const [loading, setLoading]   = useState(true);
+    const [showAdd, setShowAdd]   = useState(false);
+    const [form, setForm]         = useState({ name: "", description: "" });
+    const [saving, setSaving]     = useState(false);
+    const [toast, setToast]       = useState(null);
+    const showToast = (msg,type="success") => { setToast({msg,type}); setTimeout(()=>setToast(null),3000); };
+
+    const fetch = useCallback(async () => {
+        setLoading(true);
+        try { const r = await api.get("/admin/departments"); setDepts(r.data); }
+        catch { showToast("Failed to load departments","error"); }
+        setLoading(false);
+    }, []);
+
+    useEffect(() => { fetch(); }, [fetch]);
+
+    const handleAdd = async () => {
+        setSaving(true);
+        try {
+            await api.post("/admin/departments", form);
+            showToast("Department created");
+            setShowAdd(false); setForm({ name: "", description: "" }); fetch();
+        } catch { showToast("Failed to create department","error"); }
+        setSaving(false);
+    };
+
+    const ICONS = { TRANSPORT:"🚌", WATER:"💧", ELECTRICITY:"⚡", WASTE:"♻️" };
+
+    return (
+        <div className="tab-content">
+            {toast && <div className={`toast toast-${toast.type}`}>{toast.msg}</div>}
+
+            {/* 🔴 BUTTON REMOVED HERE */}
+            <div className="tab-toolbar">
+                <div />
+                <div className="toolbar-right">
+                    <button className="btn-primary" onClick={() => setShowAdd(true)}>
+                        + Add Department
+                    </button>
+                </div>
+            </div>
+
+            {loading ? <div className="tab-loading">Loading departments…</div> : (
+                <div className="dept-cards">
+                    {departments.length === 0 && <div className="empty-state">No departments yet.</div>}
+                    {departments.map(d => (
+                        <div key={d.id} className="dept-card">
+                            <div className="dept-card-icon">{ICONS[d.name] || "🏢"}</div>
+                            <div className="dept-card-body">
+                                <div className="dept-card-name">{d.name}</div>
+                                <div className="dept-card-desc">{d.description || "No description"}</div>
+                                <div className="dept-card-stats">
+                                    <span>👷 {d.staffCount} staff</span>
+                                    <span>📋 {d.activeComplaints} active</span>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            {showAdd && (
+                <Modal title="Create Department" onClose={() => setShowAdd(false)}>
+                    <div className="form-grid">
+                        <div className="form-field full">
+                            <label>Department Name</label>
+                            <input
+                                type="text"
+                                className="form-input"
+                                value={form.name}
+                                onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+                                placeholder="Enter department name (e.g. Roads, Housing, Sanitation)"
+                            />
+                        </div>
+                        <div className="form-field full">
+                            <label>Description</label>
+                            <input
+                                type="text"
+                                value={form.description}
+                                onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+                                className="form-input"
+                                placeholder="Optional description…"
+                            />
+                        </div>
+                    </div>
+                    <div className="modal-footer">
+                        <button className="btn-outline" onClick={() => setShowAdd(false)}>Cancel</button>
+                        <button className="btn-primary" onClick={handleAdd} disabled={saving || !form.name}>
+                            {saving ? "Creating…" : "Create Department"}
+                        </button>
+                    </div>
+                </Modal>
+            )}
+        </div>
+    );
+}
+
+// ── REPORTS TAB ────────────────────────────────────────
+function ReportsTab() {
+    const [period, setPeriod]   = useState(7);
+    const [summary, setSummary] = useState(null);
+    const [perf, setPerf]       = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    const fetch = useCallback(async () => {
+        setLoading(true);
+        try {
+            const [sRes, pRes] = await Promise.all([
+                api.get(`/admin/reports/summary?days=${period}`),
+                api.get("/admin/reports/staff-performance"),
+            ]);
+            setSummary(sRes.data); setPerf(pRes.data);
+        } catch {}
+        setLoading(false);
+    }, [period]);
+
+    useEffect(() => { fetch(); }, [fetch]);
+
+    return (
+        <div className="tab-content">
+            <div className="tab-toolbar">
+                <div className="filters">
+                    <select className="filter-select" value={period} onChange={e => setPeriod(Number(e.target.value))}>
+                        <option value={7}>Last 7 days</option>
+                        <option value={14}>Last 14 days</option>
+                        <option value={30}>Last 30 days</option>
+                    </select>
+                    <button className="btn-outline" onClick={fetch}>↻ Reload</button>
+                </div>
+                <button className="btn-outline" onClick={() => perf.length && exportCSV(perf, "staff-performance.csv")}>⬇ Export Performance CSV</button>
+            </div>
+
+            {loading ? <div className="tab-loading">Loading reports…</div> : (
+                <>
+                    {summary && (
+                        <div className="report-summary">
+                            <div className="report-card">
+                                <div className="report-num">{summary.totalComplaints}</div>
+                                <div className="report-label">Total ({summary.period})</div>
+                            </div>
+                            <div className="report-card">
+                                <div className="report-num">{summary.resolved}</div>
+                                <div className="report-label">Resolved</div>
+                            </div>
+                            <div className="report-card">
+                                <div className="report-num" style={{ color: summary.resolutionRate >= 70 ? "#22c55e" : summary.resolutionRate >= 40 ? "#f59e0b" : "#ef4444" }}>
+                                    {summary.resolutionRate?.toFixed(1)}%
+                                </div>
+                                <div className="report-label">Resolution Rate</div>
+                            </div>
+                        </div>
                     )}
 
-                    <div className="table-scroll">
-                        <table className="recent-table">
-                            <thead>
-                                <tr><th>Ref #</th><th>Category</th><th>Area</th><th>Status</th><th>Priority</th><th>Date</th></tr>
-                            </thead>
-                            <tbody>
-                                {filteredComplaints.length === 0 && (
-                                    <tr><td colSpan="6" className="empty-row">
-                                        {searchQuery || dateFrom || dateTo ? "No results match your filters." : "No complaints yet."}
-                                    </td></tr>
-                                )}
-                                {filteredComplaints.map((c) => (
-                                    <tr key={c.id} className="clickable-row"
-                                        onClick={() => setSelectedComplaint(c)} title="Click to view details">
-                                        <td className="ref-num">{c.referenceNumber}</td>
-                                        <td>{c.category}</td>
-                                        <td>{c.area}</td>
-                                        <td><span className={getStatusBadge(c.status)}>{c.status}</span></td>
-                                        <td><span className={getPriorityBadge(c.priority)}>{c.priority}</span></td>
-                                        <td>{formatShort(c.createdAt)}</td>
-                                    </tr>
+                    {summary?.hotspots && (
+                        <div className="report-section">
+                            <div className="section-label">📍 Hotspot Areas</div>
+                            <div className="hotspot-list">
+                                {Object.entries(summary.hotspots).sort((a,b)=>b[1]-a[1]).slice(0,10).map(([area,count],i)=>(
+                                    <div key={i} className="hotspot-row">
+                                        <span className="hotspot-rank">#{i+1}</span>
+                                        <span className="hotspot-area">{area}</span>
+                                        <span className="hotspot-count">{count}</span>
+                                    </div>
                                 ))}
-                            </tbody>
-                        </table>
-                    </div>
-                    <p className="click-hint no-print">💡 Click any row to view details and update status</p>
-                </div>
-
-                <div className="dash-card area-card">
-                    <div className="dash-card-header"><h3>Complaints by Area</h3></div>
-                    <div className="area-list">
-                        {complaintsByArea?.length === 0 && <p className="empty-row">No area data yet.</p>}
-                        {complaintsByArea?.map((a, i) => (
-                            <div key={a.area} className="area-row">
-                                <span className="area-rank">#{i + 1}</span>
-                                <span className="area-name">{a.area}</span>
-                                <div className="area-bar-track">
-                                    <div className="area-bar-fill" style={{
-                                        width: `${complaintsByArea[0]?.count ? (a.count / complaintsByArea[0].count) * 100 : 0}%`
-                                    }}></div>
-                                </div>
-                                <span className="area-count">{a.count}</span>
+                                {Object.keys(summary.hotspots).length === 0 && <div className="no-data">No data</div>}
                             </div>
+                        </div>
+                    )}
+
+                    <div className="report-section">
+                        <div className="section-label">👷 Staff Performance</div>
+                        {perf.length === 0 ? <div className="no-data">No staff data yet</div> : (
+                            <div className="table-wrap">
+                                <table className="data-table">
+                                    <thead>
+                                    <tr><th>Staff</th><th>Department</th><th>Assigned</th><th>Resolved</th><th>Declined</th><th>Rate</th></tr>
+                                    </thead>
+                                    <tbody>
+                                    {perf.map((s,i) => (
+                                        <tr key={i}>
+                                            <td>{s.name}</td>
+                                            <td>{s.department}</td>
+                                            <td className="mono">{s.assigned}</td>
+                                            <td className="mono" style={{color:"#22c55e"}}>{s.resolved}</td>
+                                            <td className="mono" style={{color:"#ef4444"}}>{s.declined}</td>
+                                            <td>
+                                                <div className="perf-bar-row">
+                                                    <div className="perf-bar-track">
+                                                        <div className="perf-bar-fill" style={{width:`${s.resolutionRate}%`}} />
+                                                    </div>
+                                                    <span className="mono small">{s.resolutionRate?.toFixed(0)}%</span>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </div>
+                </>
+            )}
+        </div>
+    );
+}
+
+// ── SETTINGS TAB ───────────────────────────────────────
+function SettingsTab() {
+    return (
+        <div className="tab-content">
+            <div className="settings-grid">
+                <div className="settings-card">
+                    <div className="settings-card-title">📂 Complaint Categories</div>
+                    <div className="settings-list">
+                        {["TRANSPORT — Potholes, road damage, traffic lights","WATER — Leaks, supply issues, burst pipes","ELECTRICITY — Outages, faulty street lights","WASTE — Litter, illegal dumping, bin collection"].map((c,i) => (
+                            <div key={i} className="settings-item">{c}</div>
                         ))}
+                    </div>
+                </div>
+                <div className="settings-card">
+                    <div className="settings-card-title">⚡ Priority Rules</div>
+                    <div className="settings-list">
+                        {[["🟢 LOW","Routine, non-urgent"],["🟡 MEDIUM","Response within 5 days"],["🟠 HIGH","Response within 24 hours"],["🔴 CRITICAL","Immediate escalation"]].map(([p,r],i) => (
+                            <div key={i} className="settings-item"><strong>{p}</strong> — {r}</div>
+                        ))}
+                    </div>
+                </div>
+                <div className="settings-card">
+                    <div className="settings-card-title">⏱ SLA Thresholds</div>
+                    <div className="settings-list">
+                        <div className="settings-item">Overdue trigger: <strong>3 days</strong> unresolved</div>
+                        <div className="settings-item">Auto-escalation after: <strong>7 days</strong></div>
+                        <div className="settings-item">Dashboard refresh: every <strong>30 seconds</strong></div>
+                    </div>
+                </div>
+                <div className="settings-card">
+                    <div className="settings-card-title">🔐 Admin Access</div>
+                    <div className="settings-list">
+                        <div className="settings-item">Admin email set in <code>application.properties</code></div>
+                        <div className="settings-item">JWT token required for all API calls</div>
+                        <div className="settings-item">Token expires after <strong>24 hours</strong></div>
                     </div>
                 </div>
             </div>
@@ -574,4 +705,31 @@ function AdminDashboard() {
     );
 }
 
-export default AdminDashboard;
+// ── MAIN ───────────────────────────────────────────────
+export default function AdminDashboard() {
+    const [activeTab, setActiveTab] = useState("Complaints");
+    return (
+        <div className="admin-dashboard">
+            <div className="dash-header">
+                <div>
+                    <h1 className="dash-title">Admin Management Panel</h1>
+                    <p className="dash-subtitle">Rustenburg Local Municipality — complaint management system</p>
+                </div>
+            </div>
+            <div className="dash-tabs">
+                {TABS.map(tab => (
+                    <button key={tab} className={`dash-tab ${activeTab === tab ? "active" : ""}`} onClick={() => setActiveTab(tab)}>
+                        {{Complaints:"📋",Users:"👥",Departments:"🏢",Reports:"📊",Settings:"⚙️"}[tab]} {tab}
+                    </button>
+                ))}
+            </div>
+            <div className="dash-body">
+                {activeTab === "Complaints"  && <ComplaintsTab />}
+                {activeTab === "Users"       && <UsersTab />}
+                {activeTab === "Departments" && <DepartmentsTab />}
+                {activeTab === "Reports"     && <ReportsTab />}
+                {activeTab === "Settings"    && <SettingsTab />}
+            </div>
+        </div>
+    );
+}

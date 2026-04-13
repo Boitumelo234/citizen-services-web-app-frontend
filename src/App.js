@@ -26,11 +26,11 @@ import Profile from "./pages/citizen/Profile";
 // Admin
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminOverview from "./pages/admin/AdminOverview";
-import ManageComplaints from "./pages/admin/ManageComplaints";
-import Departments from "./pages/admin/Departments";
-import Reports from "./pages/admin/Reports";
-import Users from "./pages/admin/Users";
-import SystemSettings from "./pages/admin/SystemSettings";
+// import ManageComplaints from "./pages/admin/ManageComplaints";
+// import Departments from "./pages/admin/Departments";
+// import Reports from "./pages/admin/Reports";
+// import Users from "./pages/admin/Users";
+// import SystemSettings from "./pages/admin/SystemSettings";
 import UserOverview from "./pages/admin/UserOverview";
 
 import ResetPassword from "./pages/auth/ResetPassword";
@@ -62,11 +62,11 @@ function App() {
                 {/* ADMIN */}
                 <Route path="/admin" element={<AdminLayout><AdminDashboard /></AdminLayout>} />
                 <Route path="/admin/overview" element={<AdminLayout><AdminOverview /></AdminLayout>} />
-                <Route path="/admin/complaints" element={<AdminLayout><ManageComplaints /></AdminLayout>} />
-                <Route path="/admin/departments" element={<AdminLayout><Departments /></AdminLayout>} />
-                <Route path="/admin/reports" element={<AdminLayout><Reports /></AdminLayout>} />
-                <Route path="/admin/users" element={<AdminLayout><Users /></AdminLayout>} />
-                <Route path="/admin/settings" element={<AdminLayout><SystemSettings /></AdminLayout>} />
+                {/*<Route path="/admin/complaints" element={<AdminLayout><ManageComplaints /></AdminLayout>} />*/}
+                {/*<Route path="/admin/departments" element={<AdminLayout><Departments /></AdminLayout>} />*/}
+                {/*<Route path="/admin/reports" element={<AdminLayout><Reports /></AdminLayout>} />*/}
+                {/*<Route path="/admin/users" element={<AdminLayout><Users /></AdminLayout>} />*/}
+                {/*<Route path="/admin/settings" element={<AdminLayout><SystemSettings /></AdminLayout>} />*/}
 
             </Routes>
         </BrowserRouter>
