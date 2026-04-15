@@ -32,3 +32,8 @@ export const markNotificationRead = async (id) => {
 export const markAllNotificationsRead = async () => {
     await api.patch("/api/citizen/notifications/read-all");
 };
+
+export const getMapComplaints = async () => {
+    const { data } = await api.get("/api/complaints/map");
+    return data;
+};

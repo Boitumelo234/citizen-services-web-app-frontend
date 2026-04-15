@@ -6,12 +6,12 @@ function Departments() {
   const [name, setName] = useState("");
 
   useEffect(() => {
-    axios.get("http://localhost:8080/api/admin/departments")
+    axios.get("http://localhost:8081/api/admin/departments")
       .then(res => setDepartments(res.data));
   }, []);
 
   const createDepartment = () => {
-    axios.post("http://localhost:8080/api/admin/departments", { name })
+    axios.post("http://localhost:8081/api/admin/departments", { name })
       .then(() => window.location.reload());
   };
 
