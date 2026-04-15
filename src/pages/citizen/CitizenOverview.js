@@ -1,42 +1,27 @@
-import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { LoaderCircle, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import "../../styles/dashboard.css";
-import { getOverview } from "../../services/citizenService";
 
 function CitizenOverview() {
-    const [overview, setOverview] = useState({
-        lifetimeSubmitted: 0,
-        resolved: 0,
-        open: 0,
-        avgResolutionDays: 0,
-        topCategories: [],
-        monthlyTrend: [],
-    });
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState("");
-
-    useEffect(() => {
-        const loadOverview = async () => {
-            try {
-                const data = await getOverview();
-                setOverview({
-                    lifetimeSubmitted: data.lifetimeSubmitted || 0,
-                    resolved: data.resolved || 0,
-                    open: data.open || 0,
-                    avgResolutionDays: data.avgResolutionDays || 0,
-                    topCategories: Array.isArray(data.topCategories) ? data.topCategories : [],
-                    monthlyTrend: Array.isArray(data.monthlyTrend) ? data.monthlyTrend : [],
-                });
-            } catch (err) {
-                setError(err.response?.data?.error || "Unable to load overview");
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        loadOverview();
-    }, []);
+    const overview = {
+        lifetimeSubmitted: 5,
+        resolved: 2,
+        open: 3,
+        avgResolutionDays: 4,
+        topCategories: [
+            { name: "Infrastructure & Roads", count: 2 },
+            { name: "Water & Sanitation", count: 2 },
+            { name: "Electricity & Energy", count: 1 },
+        ],
+        monthlyTrend: [
+            { month: "Sep", count: 1 },
+            { month: "Oct", count: 0 },
+            { month: "Nov", count: 1 },
+            { month: "Dec", count: 1 },
+            { month: "Jan", count: 1 },
+            { month: "Feb", count: 1 },
+        ],
+    };
 
     const stats = [
         { label: "Lifetime Submitted", value: overview.lifetimeSubmitted },
@@ -55,13 +40,11 @@ function CitizenOverview() {
                 <Link to="/citizen/submit" className="citizen-v2-primary-btn"><Plus size={16} /> New Complaint</Link>
             </section>
 
-            {error ? <p className="subtitle" style={{ color: "#dc2626" }}>{error}</p> : null}
-
             <section className="overview-stat-grid">
                 {stats.map((stat) => (
                     <article key={stat.label} className="citizen-v2-card stat">
                         <p>{stat.label}</p>
-                        <h3>{loading ? <LoaderCircle size={24} className="animate-spin" /> : stat.value}</h3>
+                        <h3>{stat.value}</h3>
                     </article>
                 ))}
             </section>
@@ -70,32 +53,27 @@ function CitizenOverview() {
                 <article className="citizen-v2-card">
                     <div className="citizen-v2-card-head"><h3>Your Top Categories</h3></div>
                     <div className="chart-placeholder">
-                        {loading
-                            ? "Loading category trend data..."
-                            : overview.topCategories.length === 0
-                                ? "No category trend data yet."
-                                : overview.topCategories.map((category) => `${category.name} ${category.count}`).join(" | ")}
+                        {overview.topCategories.length === 0
+                            ? "No category trend data yet."
+                            : overview.topCategories.map((category) => `${category.name} ${category.count}`).join(" | ")}
                     </div>
                 </article>
 
                 <article className="citizen-v2-card">
                     <div className="citizen-v2-card-head"><h3>Activity Trend (Last 6 Months)</h3></div>
                     <div className="chart-placeholder">
-                        {loading
-                            ? "Loading monthly trend data..."
-                            : overview.monthlyTrend.length === 0
-                                ? "No monthly trend data yet."
-                                : overview.monthlyTrend.map((item) => `${item.month} ${item.count}`).join(" | ")}
+                        {overview.monthlyTrend.length === 0
+                            ? "No monthly trend data yet."
+                            : overview.monthlyTrend.map((item) => `${item.month} ${item.count}`).join(" | ")}
                     </div>
                 </article>
 
                 <article className="citizen-v2-card">
                     <div className="citizen-v2-card-head"><h3>Badges & Achievements</h3></div>
                     <div className="badge-row">
-                        {overview.resolved > 0 ? <span>Resolver</span> : null}
-                        {overview.lifetimeSubmitted > 0 ? <span>Reporter</span> : null}
-                        {overview.avgResolutionDays > 0 && overview.avgResolutionDays <= 3 ? <span>Fast Turnaround</span> : null}
-                        {overview.topCategories.length === 0 ? <span>Start reporting issues</span> : null}
+                        <span>Eco Warrior</span>
+                        <span>Top Reporter Q4</span>
+                        <span>Fast Responder</span>
                     </div>
                 </article>
             </section>
