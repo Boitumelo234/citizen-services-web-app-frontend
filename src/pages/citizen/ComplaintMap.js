@@ -3,6 +3,7 @@ import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from "react-leaf
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "../../styles/dashboard.css";
+import { getMapComplaints } from "../../services/citizenService";
 
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -134,7 +135,7 @@ function ComplaintForm({ selectedLocation, onSubmit, onCancel }) {
                 formDataObject.append("photo", selectedFile);
             }
 
-            const response = await fetch("http://localhost:8080/api/complaints", {
+            const response = await fetch("http://localhost:8081/api/complaints", {
                 method: "POST",
                 headers: {
                     Authorization: `Bearer ${token}`,
@@ -302,16 +303,40 @@ function ComplaintForm({ selectedLocation, onSubmit, onCancel }) {
 function ComplaintMap() {
     const [selectedLocation, setSelectedLocation] = useState(null);
     const [showForm, setShowForm] = useState(false);
+    const [complaints, setComplaints] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState("");
 
     const rustenburgCenter = [-25.67, 27.24];
     const defaultZoom = 13;
+
+    useEffect(() => {
+        const loadComplaints = async () => {
+            try {
+                const data = await getMapComplaints();
+                setComplaints(Array.isArray(data) ? data : []);
+            } catch (err) {
+                setError(err.response?.data?.error || "Unable to load map complaints");
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        loadComplaints();
+    }, []);
 
     const handleLocationSelect = (location) => {
         setSelectedLocation(location);
         setShowForm(true);
     };
 
-    const handleFormSubmit = () => {
+    const handleFormSubmit = async () => {
+        try {
+            const data = await getMapComplaints();
+            setComplaints(Array.isArray(data) ? data : []);
+        } catch (err) {
+            setError(err.response?.data?.error || "Unable to refresh map complaints");
+        }
         setShowForm(false);
         setSelectedLocation(null);
     };
@@ -325,6 +350,9 @@ function ComplaintMap() {
         <div className="dashboard-container">
             <h1 className="dashboard-title">Complaint Map</h1>
             <p className="subtitle">See reported issues across Rustenburg in real time</p>
+            {error ? (
+                <p className="subtitle" style={{ color: "#dc2626" }}>{error}</p>
+            ) : null}
 
             <div className="card mt-8">
                 <div className="p-6 pt-8">
@@ -340,6 +368,24 @@ function ComplaintMap() {
                                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                             />
+                            {complaints
+                                .filter((complaint) => complaint.latitude != null && complaint.longitude != null)
+                                .map((complaint) => (
+                                    <Marker
+                                        key={complaint.id}
+                                        position={[complaint.latitude, complaint.longitude]}
+                                    >
+                                        <Popup>
+                                            <div className="text-sm">
+                                                <p className="font-semibold text-base">{complaint.referenceNumber}</p>
+                                                <p className="mt-1">{complaint.category}</p>
+                                                <p className="text-gray-600 mt-1">{complaint.status}</p>
+                                                <p className="text-gray-600 mt-1">{complaint.location}</p>
+                                                <p className="text-gray-600 mt-2">{complaint.description}</p>
+                                            </div>
+                                        </Popup>
+                                    </Marker>
+                                ))}
                             <LocationPicker onLocationSelect={handleLocationSelect} selectedLocation={selectedLocation} />
                         </MapContainer>
                     </div>
@@ -362,6 +408,9 @@ function ComplaintMap() {
                             <span>New</span>
                         </div>
                     </div>
+                    <p className="subtitle" style={{ marginTop: "1rem", marginBottom: 0 }}>
+                        {loading ? "Loading reported issues..." : `${complaints.length} mapped complaints loaded`}
+                    </p>
                 </div>
             </div>
 
@@ -377,3 +426,4 @@ function ComplaintMap() {
 }
 
 export default ComplaintMap;
+

@@ -56,7 +56,7 @@ function AddUpdateModal({ complaint, onClose, onSuccess }) {
             if (newLocation.trim()) formData.append("newLocation", newLocation.trim());
             if (photoFile) formData.append("photo", photoFile);
 
-            const res = await fetch(`http://localhost:8080/api/complaints/${complaint.id}/updates`, {
+            const res = await fetch(`http://localhost:8081/api/complaints/${complaint.id}/updates`, {
                 method: "POST",
                 headers: { Authorization: `Bearer ${token}` },
                 body: formData,
