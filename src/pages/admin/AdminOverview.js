@@ -1,6 +1,6 @@
-import { useEffect, useState, useCallback, useRef } from "react";
+// AdminOverview.js – Light theme, citizen styling (no circular export)
+import { useEffect, useState, useCallback } from "react";
 import api from "../../api/api";
-import "../../styles/dashboard.css";
 import "../../styles/admin.css";
 
 const CATEGORY_COLORS = {
@@ -12,7 +12,6 @@ const STATUS_COLORS = {
 };
 const DEPT_ICONS = { TRANSPORT: "🚌", WATER: "💧", ELECTRICITY: "⚡", WASTE: "♻️" };
 
-// ── Helpers ────────────────────────────────────────────
 function timeAgo(dateStr) {
     if (!dateStr) return "—";
     const diff = Date.now() - new Date(dateStr).getTime();
@@ -25,7 +24,6 @@ function timeAgo(dateStr) {
     return "just now";
 }
 
-// ── Stat Card ──────────────────────────────────────────
 function StatCard({ label, value, icon, color, sub }) {
     return (
         <div className="stat-card" style={{ "--accent": color }}>
@@ -39,7 +37,6 @@ function StatCard({ label, value, icon, color, sub }) {
     );
 }
 
-// ── Mini Bar Chart ─────────────────────────────────────
 function MiniBarChart({ data, colorMap, title }) {
     if (!data || data.length === 0) return <div className="chart-empty">No data yet</div>;
     const max = Math.max(...data.map(d => Number(d.count || 0)), 1);
@@ -67,9 +64,8 @@ function MiniBarChart({ data, colorMap, title }) {
     );
 }
 
-// ── Line Chart ─────────────────────────────────────────
 function LineChart({ data, title }) {
-    if (!data || data.length < 2) return <div className="chart-empty">Insufficient data for chart</div>;
+    if (!data || data.length < 2) return <div className="chart-empty">Insufficient data for trend chart</div>;
     const values = data.map(d => Number(d.count));
     const max = Math.max(...values, 1);
     const min = Math.min(...values, 0);
@@ -87,7 +83,7 @@ function LineChart({ data, title }) {
             <svg viewBox={`0 0 ${W} ${H}`} className="line-chart-svg">
                 <defs>
                     <linearGradient id="lineGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#6366f1" stopOpacity="0.4" />
+                        <stop offset="0%"   stopColor="#6366f1" stopOpacity="0.4" />
                         <stop offset="100%" stopColor="#6366f1" stopOpacity="0" />
                     </linearGradient>
                 </defs>
@@ -95,7 +91,11 @@ function LineChart({ data, title }) {
                 <polyline points={polyline} fill="none" stroke="#6366f1" strokeWidth="2.5" strokeLinejoin="round" />
                 {data.map((d, i) => {
                     const [x, y] = pts[i].split(",").map(Number);
-                    return <circle key={i} cx={x} cy={y} r="3.5" fill="#6366f1"><title>{d.date}: {d.count}</title></circle>;
+                    return (
+                        <circle key={i} cx={x} cy={y} r="3.5" fill="#6366f1">
+                            <title>{d.date}: {d.count}</title>
+                        </circle>
+                    );
                 })}
             </svg>
             <div className="line-chart-labels">
@@ -105,13 +105,15 @@ function LineChart({ data, title }) {
     );
 }
 
-// ── Alert Badge ────────────────────────────────────────
 function AlertBadge({ type }) {
     const map = { CRITICAL: "#ef4444", OVERDUE: "#f97316", UNASSIGNED: "#8b5cf6" };
-    return <span className="alert-badge" style={{ background: map[type] || "#6b7280" }}>{type}</span>;
+    return (
+        <span className="alert-badge" style={{ background: map[type] || "#6b7280" }}>
+            {type}
+        </span>
+    );
 }
 
-// ── Countdown Timer ────────────────────────────────────
 function RefreshCountdown({ seconds, onRefresh }) {
     const [count, setCount] = useState(seconds);
     useEffect(() => {
@@ -128,14 +130,12 @@ function RefreshCountdown({ seconds, onRefresh }) {
     );
 }
 
-// ── Hotspot Widget ─────────────────────────────────────
 function HotspotWidget({ complaints }) {
     if (!complaints || complaints.length === 0) return <div className="no-data">No complaint data</div>;
     const areaMap = {};
-    complaints.forEach(c => {
-        if (c.area) areaMap[c.area] = (areaMap[c.area] || 0) + 1;
-    });
+    complaints.forEach(c => { if (c.area) areaMap[c.area] = (areaMap[c.area] || 0) + 1; });
     const sorted = Object.entries(areaMap).sort((a, b) => b[1] - a[1]).slice(0, 5);
+    if (sorted.length === 0) return <div className="no-data">No area data available</div>;
     const maxVal = sorted[0]?.[1] || 1;
     const rankColors = ["#ef4444", "#f97316", "#eab308", "#22c55e", "#3b82f6"];
     return (
@@ -156,14 +156,12 @@ function HotspotWidget({ complaints }) {
     );
 }
 
-// ── Avg Resolution Card ────────────────────────────────
 function AvgResolutionCard({ complaints }) {
     if (!complaints || complaints.length === 0) return <div className="no-data">No data</div>;
     const resolved = complaints.filter(c => c.status === "RESOLVED" && c.createdAt && c.resolvedAt);
     if (resolved.length === 0) return <div className="no-data">No resolved complaints yet</div>;
-    const avgMs = resolved.reduce((acc, c) => {
-        return acc + (new Date(c.resolvedAt).getTime() - new Date(c.createdAt).getTime());
-    }, 0) / resolved.length;
+    const avgMs = resolved.reduce((acc, c) =>
+        acc + (new Date(c.resolvedAt).getTime() - new Date(c.createdAt).getTime()), 0) / resolved.length;
     const avgDays = (avgMs / (1000 * 60 * 60 * 24)).toFixed(1);
     const color = avgDays < 2 ? "#22c55e" : avgDays < 5 ? "#f59e0b" : "#ef4444";
     return (
@@ -175,33 +173,29 @@ function AvgResolutionCard({ complaints }) {
     );
 }
 
-// ── Staff Availability Panel ───────────────────────────
 function StaffAvailabilityPanel({ complaints, staff }) {
     if (!staff || staff.length === 0) return <div className="no-data">No staff data</div>;
     const activeMap = {};
     (complaints || []).forEach(c => {
-        if (c.assignedToId && c.status !== "RESOLVED" && c.status !== "DECLINED") {
+        if (c.assignedToId && c.status !== "RESOLVED" && c.status !== "DECLINED")
             activeMap[c.assignedToId] = (activeMap[c.assignedToId] || 0) + 1;
-        }
     });
     const staffOnly = staff.filter(s => s.role === "STAFF");
+    if (staffOnly.length === 0) return <div className="no-data">No staff members found</div>;
     return (
         <div className="staff-avail-list">
-            {staffOnly.length === 0 && <div className="no-data">No staff members found</div>}
             {staffOnly.map((s, i) => {
                 const active = activeMap[s.id] || 0;
-                const busy = active >= 5;
-                const moderate = active >= 3;
+                const loadClass = active >= 5 ? "busy" : active >= 3 ? "moderate" : "free";
+                const initials = (s.fullName || s.email || "?")[0].toUpperCase();
                 return (
                     <div key={i} className="staff-avail-row">
-                        <div className="staff-avail-avatar">{(s.fullName || s.email || "?")[0].toUpperCase()}</div>
+                        <div className="staff-avail-avatar">{initials}</div>
                         <div className="staff-avail-info">
                             <div className="staff-avail-name">{s.fullName || s.email}</div>
                             <div className="staff-avail-dept">{s.departmentName || "—"}</div>
                         </div>
-                        <div className={`staff-avail-load ${busy ? "busy" : moderate ? "moderate" : "free"}`}>
-                            {active} active
-                        </div>
+                        <div className={`staff-avail-load ${loadClass}`}>{active} active</div>
                     </div>
                 );
             })}
@@ -209,19 +203,26 @@ function StaffAvailabilityPanel({ complaints, staff }) {
     );
 }
 
-// ── MAIN COMPONENT ─────────────────────────────────────
+function LoadingState() {
+    return (
+        <div className="ov-loading">
+            <div className="ov-spinner" />
+            <p>Loading city operations data…</p>
+        </div>
+    );
+}
+
 export default function AdminOverview() {
-    const [stats, setStats]           = useState(null);
-    const [daily, setDaily]           = useState([]);
-    const [byCategory, setByCategory] = useState([]);
-    const [byStatus, setByStatus]     = useState([]);
+    const [stats, setStats]               = useState(null);
+    const [daily, setDaily]               = useState([]);
+    const [byCategory, setByCategory]     = useState([]);
+    const [byStatus, setByStatus]         = useState([]);
     const [deptActivity, setDeptActivity] = useState([]);
-    const [alerts, setAlerts]         = useState({ unassignedCount: 0, criticalCount: 0, overdueCount: 0, alerts: [] });
+    const [alerts, setAlerts]             = useState({ unassignedCount: 0, criticalCount: 0, overdueCount: 0, alerts: [] });
     const [allComplaints, setAllComplaints] = useState([]);
-    const [allStaff, setAllStaff]     = useState([]);
-    const [loading, setLoading]       = useState(true);
-    const [error, setError]           = useState(null);
-    const [lastRefresh, setLastRefresh] = useState(new Date());
+    const [allStaff, setAllStaff]         = useState([]);
+    const [loading, setLoading]           = useState(true);
+    const [error, setError]               = useState(null);
 
     const fetchAll = useCallback(async () => {
         try {
@@ -243,9 +244,8 @@ export default function AdminOverview() {
             setAlerts(alertsRes.data);
             setAllComplaints(complaintsRes.data);
             setAllStaff(staffRes.data);
-            setLastRefresh(new Date());
             setError(null);
-        } catch (e) {
+        } catch {
             setError("Failed to load data. Is the backend running on port 8080?");
         } finally {
             setLoading(false);
@@ -258,16 +258,10 @@ export default function AdminOverview() {
         return () => clearInterval(interval);
     }, [fetchAll]);
 
-    if (loading) return (
-        <div className="ov-loading">
-            <div className="ov-spinner" />
-            <p>Loading city operations data…</p>
-        </div>
-    );
+    if (loading) return <LoadingState />;
 
     return (
         <div className="admin-overview">
-            {/* ── HEADER ── */}
             <div className="ov-header">
                 <div>
                     <h1 className="ov-title">City Operations Centre</h1>
@@ -276,23 +270,25 @@ export default function AdminOverview() {
                 <RefreshCountdown seconds={30} onRefresh={fetchAll} />
             </div>
 
-            {error && <div className="ov-error">⚠ {error}</div>}
+            {error && (
+                <div className="ov-error">
+                    ⚠ {error}
+                </div>
+            )}
 
-            {/* ── STAT CARDS ── */}
             <div className="stats-grid">
-                <StatCard label="Total Complaints" value={stats?.totalComplaints} icon="📋" color="#6366f1" />
-                <StatCard label="Pending" value={stats?.pending} icon="🕐" color="#ef4444"
+                <StatCard label="Total Complaints" value={stats?.totalComplaints}   icon="📋" color="#6366f1" />
+                <StatCard label="Pending"           value={stats?.pending}           icon="🕐" color="#ef4444"
                           sub={stats?.pending > 10 ? "⚠ High backlog" : "Under control"} />
-                <StatCard label="In Progress" value={stats?.inProgress} icon="⚙️" color="#3b82f6" />
-                <StatCard label="Resolved Today" value={stats?.resolvedToday} icon="✅" color="#22c55e" />
-                <StatCard label="Total Citizens" value={stats?.totalCitizens} icon="👥" color="#8b5cf6" />
-                <StatCard label="Active Staff" value={stats?.activeStaff} icon="👷" color="#f97316" />
-                <StatCard label="Unassigned" value={stats?.unassigned} icon="❗" color="#ef4444"
+                <StatCard label="In Progress"       value={stats?.inProgress}        icon="⚙️" color="#3b82f6" />
+                <StatCard label="Resolved Today"    value={stats?.resolvedToday}     icon="✅" color="#22c55e" />
+                <StatCard label="Total Citizens"    value={stats?.totalCitizens}     icon="👥" color="#8b5cf6" />
+                <StatCard label="Active Staff"      value={stats?.activeStaff}       icon="👷" color="#f97316" />
+                <StatCard label="Unassigned"        value={stats?.unassigned}        icon="❗" color="#ef4444"
                           sub={stats?.unassigned > 0 ? "Needs attention" : "All assigned"} />
-                <StatCard label="Critical Pending" value={stats?.criticalPending} icon="🔴" color="#dc2626" />
+                <StatCard label="Critical Pending"  value={stats?.criticalPending}   icon="🔴" color="#dc2626" />
             </div>
 
-            {/* ── CHARTS ── */}
             <div className="charts-row">
                 <div className="chart-card wide">
                     <LineChart data={daily} title="📈 Complaints Received — Last 7 Days" />
@@ -305,7 +301,6 @@ export default function AdminOverview() {
                 </div>
             </div>
 
-            {/* ── NEW: INSIGHTS ROW ── */}
             <div className="insights-row">
                 <div className="panel insight-panel">
                     <div className="panel-header">
@@ -314,12 +309,14 @@ export default function AdminOverview() {
                     </div>
                     <HotspotWidget complaints={allComplaints} />
                 </div>
+
                 <div className="panel insight-panel">
                     <div className="panel-header">
                         <span className="panel-title">⏱ Avg Resolution Time</span>
                     </div>
                     <AvgResolutionCard complaints={allComplaints} />
                 </div>
+
                 <div className="panel insight-panel">
                     <div className="panel-header">
                         <span className="panel-title">👷 Staff Availability</span>
@@ -328,7 +325,6 @@ export default function AdminOverview() {
                 </div>
             </div>
 
-            {/* ── BOTTOM PANELS ── */}
             <div className="bottom-grid">
                 <div className="panel alerts-panel">
                     <div className="panel-header">
@@ -336,19 +332,27 @@ export default function AdminOverview() {
                         <span className="panel-badge">{alerts.alerts?.length || 0}</span>
                     </div>
                     <div className="alerts-summary">
-                        <div className="alert-count-chip critical"><span>{alerts.criticalCount}</span> Critical</div>
-                        <div className="alert-count-chip overdue"><span>{alerts.overdueCount}</span> Overdue</div>
-                        <div className="alert-count-chip unassigned"><span>{alerts.unassignedCount}</span> Unassigned</div>
+                        <div className="alert-count-chip critical">
+                            <span>{alerts.criticalCount}</span>Critical
+                        </div>
+                        <div className="alert-count-chip overdue">
+                            <span>{alerts.overdueCount}</span>Overdue
+                        </div>
+                        <div className="alert-count-chip unassigned">
+                            <span>{alerts.unassignedCount}</span>Unassigned
+                        </div>
                     </div>
                     <div className="alerts-list">
-                        {!alerts.alerts?.length
-                            ? <div className="no-alerts">✅ No active alerts — system healthy</div>
-                            : alerts.alerts.map((a, i) => (
+                        {!alerts.alerts?.length ? (
+                            <div className="no-alerts">✅ No active alerts — system healthy</div>
+                        ) : (
+                            alerts.alerts.map((a, i) => (
                                 <div key={i} className="alert-item">
                                     <AlertBadge type={a.type} />
                                     <span className="alert-msg">{a.message}</span>
                                 </div>
-                            ))}
+                            ))
+                        )}
                     </div>
                 </div>
 
@@ -357,21 +361,23 @@ export default function AdminOverview() {
                         <span className="panel-title">🏢 Department Activity</span>
                     </div>
                     <div className="dept-list">
-                        {deptActivity.length === 0
-                            ? <div className="no-data">No departments configured yet</div>
-                            : deptActivity.map((d, i) => (
+                        {deptActivity.length === 0 ? (
+                            <div className="no-data">No departments configured yet</div>
+                        ) : (
+                            deptActivity.map((d, i) => (
                                 <div key={i} className="dept-row">
                                     <div className="dept-icon">{DEPT_ICONS[d.name] || "🏢"}</div>
                                     <div className="dept-info">
                                         <div className="dept-name">{d.name}</div>
                                         <div className="dept-meta">{d.staffCount} staff member{d.staffCount !== 1 ? "s" : ""}</div>
                                     </div>
-                                    <div className="dept-count">
+                                    <div>
                                         <span className="dept-active-num">{d.activeComplaints}</span>
                                         <span className="dept-active-label"> active</span>
                                     </div>
                                 </div>
-                            ))}
+                            ))
+                        )}
                     </div>
                 </div>
 
@@ -380,23 +386,26 @@ export default function AdminOverview() {
                         <span className="panel-title">📊 Resolution Status</span>
                     </div>
                     <div className="status-breakdown">
-                        {byStatus.map((s, i) => {
-                            const color = STATUS_COLORS[s.status] || "#6b7280";
+                        {byStatus.length === 0 ? (
+                            <div className="no-data">No complaints yet</div>
+                        ) : (() => {
                             const total = byStatus.reduce((acc, x) => acc + Number(x.count), 0);
-                            const pct = total > 0 ? Math.round((Number(s.count) / total) * 100) : 0;
-                            return (
-                                <div key={i} className="status-row">
-                                    <div className="status-dot" style={{ background: color }} />
-                                    <div className="status-name">{s.status}</div>
-                                    <div className="status-bar-wrap">
-                                        <div className="status-bar-fill" style={{ width: `${pct}%`, background: color }} />
+                            return byStatus.map((s, i) => {
+                                const color = STATUS_COLORS[s.status] || "#6b7280";
+                                const pct = total > 0 ? Math.round((Number(s.count) / total) * 100) : 0;
+                                return (
+                                    <div key={i} className="status-row">
+                                        <div className="status-dot" style={{ background: color }} />
+                                        <div className="status-name">{s.status}</div>
+                                        <div className="status-bar-wrap">
+                                            <div className="status-bar-fill" style={{ width: `${pct}%`, background: color }} />
+                                        </div>
+                                        <div className="status-pct">{pct}%</div>
+                                        <div className="status-count">{s.count}</div>
                                     </div>
-                                    <div className="status-pct">{pct}%</div>
-                                    <div className="status-count">{s.count}</div>
-                                </div>
-                            );
-                        })}
-                        {byStatus.length === 0 && <div className="no-data">No complaints yet</div>}
+                                );
+                            });
+                        })()}
                     </div>
                 </div>
             </div>

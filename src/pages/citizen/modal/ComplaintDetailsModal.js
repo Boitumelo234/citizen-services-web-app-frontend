@@ -3,233 +3,320 @@ import { useEffect, useState } from 'react';
 
 function ComplaintDetailsModal({ complaint, onClose, formatDate, getImageUrl }) {
     const [imageLoaded, setImageLoaded] = useState(false);
-    const [updateImagesLoaded, setUpdateImagesLoaded] = useState({});
+    const [imageError, setImageError] = useState(false);
+    const [updateImagesState, setUpdateImagesState] = useState({});
 
     useEffect(() => {
-        // Prevent body scrolling when modal is open
+        const prev = document.body.style.overflow;
         document.body.style.overflow = 'hidden';
-
-        return () => {
-            document.body.style.overflow = 'unset';
-        };
+        return () => { document.body.style.overflow = prev; };
     }, []);
+
+    // Close on Escape key
+    useEffect(() => {
+        const handler = (e) => { if (e.key === 'Escape') onClose(); };
+        window.addEventListener('keydown', handler);
+        return () => window.removeEventListener('keydown', handler);
+    }, [onClose]);
 
     if (!complaint) return null;
 
-    // Handle click on backdrop
-    const handleBackdropClick = (e) => {
-        if (e.target === e.currentTarget) {
-            onClose();
-        }
-    };
-
-    const handleImageLoad = () => {
-        setImageLoaded(true);
-    };
-
-    const handleUpdateImageLoad = (updateId) => {
-        setUpdateImagesLoaded(prev => ({ ...prev, [updateId]: true }));
-    };
-
-    const handleImageError = (e) => {
-        console.log('Image failed to load in modal');
-        e.target.style.display = 'none';
-        // Show a fallback div
-        const parent = e.target.parentElement;
-        if (parent && !parent.querySelector('.image-fallback')) {
-            const fallback = document.createElement('div');
-            fallback.className = 'image-fallback flex items-center justify-center h-48 bg-gray-100 rounded';
-            fallback.innerHTML = '<p class="text-gray-400">Image not available</p>';
-            parent.appendChild(fallback);
-        }
-    };
-
     const mainImageUrl = complaint.photoUrl ? getImageUrl(complaint.photoUrl) : null;
+
+    const statusColor = {
+        resolved:    { text: '#047857', bg: '#ecfdf5', border: '#a7f3d0' },
+        'in progress': { text: '#b45309', bg: '#fffbeb', border: '#fde68a' },
+        pending:     { text: '#1d4ed8', bg: '#eff6ff', border: '#bfdbfe' },
+    };
+    const statusKey = complaint.status?.toLowerCase() || 'pending';
+    const sc = statusColor[statusKey] || statusColor.pending;
 
     return (
         <div
-            className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[9999] p-4"
-            onClick={handleBackdropClick}
-            style={{ backdropFilter: 'blur(4px)' }}
+            onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+            style={{
+                position: 'fixed', inset: 0,
+                background: 'rgba(15,23,42,0.55)',
+                backdropFilter: 'blur(6px)',
+                WebkitBackdropFilter: 'blur(6px)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                zIndex: 99999, padding: '1.25rem',
+            }}
         >
             <div
-                className="card overflow-y-auto flex-1"
                 onClick={(e) => e.stopPropagation()}
-                style={{ maxHeight: '95vh' }}
+                style={{
+                    background: '#ffffff',
+                    borderRadius: '1.25rem',
+                    width: '100%',
+                    maxWidth: '680px',
+                    maxHeight: '90vh',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    boxShadow: '0 32px 64px rgba(15,23,42,0.22), 0 0 0 1px rgba(226,232,240,0.8)',
+                    overflow: 'hidden',
+                }}
             >
-                {/* Header */}
-                <div className="sticky top-0 bg-white z-10 px-6 py-4 border-b flex justify-between items-center rounded-t-2xl">
-                    <h2 className="text-xl font-bold text-gray-900 truncate pr-4">
-                        Complaint {complaint.referenceNumber}
-                    </h2>
+                {/* ── Header ── */}
+                <div style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '1.25rem 1.5rem',
+                    borderBottom: '1px solid #f1f5f9',
+                    background: '#fafbfc',
+                    flexShrink: 0,
+                }}>
+                    <div>
+                        <p style={{ margin: 0, fontSize: '0.75rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                            Complaint Details
+                        </p>
+                        <h2 style={{ margin: '0.2rem 0 0', fontSize: '1.15rem', fontWeight: 700, color: '#0f172a' }}>
+                            {complaint.referenceNumber}
+                        </h2>
+                    </div>
                     <button
                         onClick={onClose}
-                        className="text-gray-500 hover:text-gray-800 text-3xl font-light leading-none focus:outline-none w-8 h-8 flex items-center justify-center hover:bg-gray-100 rounded-full flex-shrink-0"
-                        title="Close"
+                        aria-label="Close"
+                        style={{
+                            width: '36px', height: '36px', borderRadius: '50%',
+                            border: '1px solid #e2e8f0', background: '#fff',
+                            color: '#64748b', fontSize: '1.35rem', lineHeight: 1,
+                            cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            transition: 'all 0.15s',
+                            flexShrink: 0,
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.background = '#f1f5f9'; e.currentTarget.style.color = '#0f172a'; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.color = '#64748b'; }}
                     >
                         ×
                     </button>
                 </div>
 
-                {/* Scrollable Content */}
-                <div className="overflow-y-auto flex-1 p-6">
-                    <div className="space-y-6">
-                        {/* Key info grid */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div className="bg-gray-50 p-3 rounded-lg">
-                                <p className="text-sm text-gray-500 font-medium">Category</p>
-                                <p className="mt-1 font-semibold text-gray-900 break-words">{complaint.category}</p>
-                            </div>
-                            <div className="bg-gray-50 p-3 rounded-lg">
-                                <p className="text-sm text-gray-500 font-medium">Location</p>
-                                <p className="mt-1 font-semibold text-gray-900 break-words">{complaint.location}</p>
-                            </div>
-                            <div className="bg-gray-50 p-3 rounded-lg">
-                                <p className="text-sm text-gray-500 font-medium">Status</p>
-                                <p className={`mt-1 font-semibold capitalize ${
-                                    complaint.status?.toLowerCase() === 'resolved' ? 'text-green-600' :
-                                        complaint.status?.toLowerCase() === 'in progress' ? 'text-blue-600' :
-                                            complaint.status?.toLowerCase() === 'pending' ? 'text-yellow-600' :
-                                                'text-gray-600'
-                                }`}>
-                                    {complaint.status || 'Pending'}
+                {/* ── Scrollable body ── */}
+                <div style={{ overflowY: 'auto', flex: 1, padding: '1.5rem' }}>
+
+                    {/* Status + Meta row */}
+                    <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1.25rem' }}>
+                        <span style={{
+                            display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
+                            padding: '0.35rem 0.85rem', borderRadius: '999px',
+                            background: sc.bg, border: `1px solid ${sc.border}`,
+                            color: sc.text, fontSize: '0.78rem', fontWeight: 700,
+                        }}>
+                            <span style={{ width: 7, height: 7, borderRadius: '50%', background: sc.text, display: 'inline-block' }} />
+                            {complaint.status || 'Pending'}
+                        </span>
+                        <span style={{
+                            display: 'inline-flex', alignItems: 'center',
+                            padding: '0.35rem 0.85rem', borderRadius: '999px',
+                            background: '#f8fafc', border: '1px solid #e2e8f0',
+                            color: '#64748b', fontSize: '0.78rem', fontWeight: 600,
+                        }}>
+                            📅 {formatDate(complaint.createdAt)}
+                        </span>
+                    </div>
+
+                    {/* Info grid */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '1.25rem' }}>
+                        {[
+                            { label: 'Category', value: complaint.category, icon: '🏷️' },
+                            { label: 'Location', value: complaint.location, icon: '📍' },
+                        ].map(({ label, value, icon }) => (
+                            <div key={label} style={{
+                                background: '#f8fafc', border: '1px solid #e2e8f0',
+                                borderRadius: '0.9rem', padding: '0.85rem 1rem',
+                            }}>
+                                <p style={{ margin: 0, fontSize: '0.72rem', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.4rem' }}>
+                                    {icon} {label}
+                                </p>
+                                <p style={{ margin: 0, fontWeight: 600, color: '#1e293b', fontSize: '0.88rem', wordBreak: 'break-word' }}>
+                                    {value || '—'}
                                 </p>
                             </div>
-                            <div className="bg-gray-50 p-3 rounded-lg">
-                                <p className="text-sm text-gray-500 font-medium">Submitted</p>
-                                <p className="mt-1 font-semibold text-gray-900">{formatDate(complaint.createdAt)}</p>
+                        ))}
+                    </div>
+
+                    {/* Description */}
+                    <div style={{ marginBottom: '1.25rem' }}>
+                        <p style={{ margin: '0 0 0.5rem', fontSize: '0.78rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                            💬 Description
+                        </p>
+                        <div style={{
+                            background: '#f8fafc', border: '1px solid #e2e8f0',
+                            borderRadius: '0.9rem', padding: '1rem 1.1rem',
+                        }}>
+                            <p style={{ margin: 0, color: '#334155', lineHeight: 1.7, fontSize: '0.9rem', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                                {complaint.description}
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* Attached photo */}
+                    {mainImageUrl && (
+                        <div style={{ marginBottom: '1.25rem' }}>
+                            <p style={{ margin: '0 0 0.5rem', fontSize: '0.78rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                📷 Attached Photo
+                            </p>
+                            <div style={{
+                                background: '#f8fafc', border: '1px solid #e2e8f0',
+                                borderRadius: '0.9rem', padding: '0.75rem',
+                                overflow: 'hidden',
+                            }}>
+                                {!imageLoaded && !imageError && (
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '180px', gap: '0.5rem', color: '#94a3b8', fontSize: '0.8rem' }}>
+                                        <div style={{
+                                            width: 22, height: 22, borderRadius: '50%',
+                                            border: '2px solid #e2e8f0', borderTopColor: '#2563eb',
+                                            animation: 'spin 0.7s linear infinite',
+                                        }} />
+                                        Loading image…
+                                    </div>
+                                )}
+                                {imageError && (
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '120px', color: '#94a3b8', fontSize: '0.82rem', flexDirection: 'column', gap: '0.4rem' }}>
+                                        <span style={{ fontSize: '1.8rem' }}>🖼️</span>
+                                        Image unavailable
+                                    </div>
+                                )}
+                                <img
+                                    src={mainImageUrl}
+                                    alt="Complaint attachment"
+                                    onLoad={() => setImageLoaded(true)}
+                                    onError={() => { setImageError(true); setImageLoaded(true); }}
+                                    style={{
+                                        display: imageError ? 'none' : 'block',
+                                        width: '100%',
+                                        maxHeight: '340px',
+                                        objectFit: 'contain',
+                                        borderRadius: '0.6rem',
+                                        opacity: imageLoaded ? 1 : 0,
+                                        transition: 'opacity 0.3s ease',
+                                    }}
+                                />
                             </div>
                         </div>
+                    )}
 
-                        {/* Description */}
-                        <div>
-                            <p className="text-sm text-gray-500 font-medium mb-2">Description</p>
-                            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                                <p className="whitespace-pre-wrap text-gray-700 leading-relaxed break-words">
-                                    {complaint.description}
-                                </p>
-                            </div>
-                        </div>
+                    {/* Updates */}
+                    <div>
+                        <p style={{ margin: '0 0 0.75rem', fontSize: '0.78rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            🔄 Updates
+                            {complaint.updates?.length > 0 && (
+                                <span style={{ background: '#2563eb', color: '#fff', borderRadius: '999px', padding: '0.05rem 0.55rem', fontSize: '0.7rem', fontWeight: 700 }}>
+                                    {complaint.updates.length}
+                                </span>
+                            )}
+                        </p>
 
-                        {/* Original Photo */}
-                        {mainImageUrl && (
-                            <div>
-                                <p className="text-sm text-gray-500 font-medium mb-2">Attached Photo</p>
-                                <div className="rounded-lg overflow-hidden shadow-sm border border-gray-200 bg-gray-50 p-4">
-                                    {!imageLoaded && (
-                                        <div className="flex items-center justify-center h-48 bg-gray-100 rounded">
-                                            <div className="text-center">
-                                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
-                                                <p className="text-gray-400 text-sm">Loading image...</p>
+                        {complaint.updates?.length > 0 ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                {complaint.updates.map((update, index) => {
+                                    const upImgUrl = update.photoUrl ? getImageUrl(update.photoUrl) : null;
+                                    const upState = updateImagesState[update.id] || {};
+
+                                    return (
+                                        <div key={update.id} style={{
+                                            background: '#f8fafc', border: '1px solid #e2e8f0',
+                                            borderRadius: '0.9rem', padding: '1rem 1.1rem',
+                                        }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem' }}>
+                                                <span style={{
+                                                    background: '#eff6ff', border: '1px solid #bfdbfe',
+                                                    color: '#1d4ed8', borderRadius: '999px',
+                                                    padding: '0.2rem 0.65rem', fontSize: '0.7rem', fontWeight: 700,
+                                                }}>
+                                                    Update #{index + 1}
+                                                </span>
+                                                <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>
+                                                    {formatDate(update.createdAt)}
+                                                </span>
                                             </div>
+
+                                            {update.newLocation && (
+                                                <div style={{ marginBottom: '0.6rem', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '0.6rem', padding: '0.5rem 0.75rem' }}>
+                                                    <p style={{ margin: 0, fontSize: '0.72rem', color: '#94a3b8', marginBottom: '0.2rem' }}>📍 Updated location</p>
+                                                    <p style={{ margin: 0, fontWeight: 600, color: '#1e293b', fontSize: '0.83rem', wordBreak: 'break-word' }}>{update.newLocation}</p>
+                                                </div>
+                                            )}
+
+                                            <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '0.6rem', padding: '0.65rem 0.75rem', marginBottom: upImgUrl ? '0.6rem' : 0 }}>
+                                                <p style={{ margin: 0, fontSize: '0.72rem', color: '#94a3b8', marginBottom: '0.2rem' }}>💬 Comment</p>
+                                                <p style={{ margin: 0, color: '#334155', fontSize: '0.85rem', lineHeight: 1.6, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{update.comment}</p>
+                                            </div>
+
+                                            {upImgUrl && (
+                                                <div style={{ marginTop: '0.6rem' }}>
+                                                    <p style={{ margin: '0 0 0.4rem', fontSize: '0.72rem', color: '#94a3b8' }}>📷 Additional photo</p>
+                                                    <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '0.6rem', padding: '0.5rem', overflow: 'hidden' }}>
+                                                        {!upState.loaded && !upState.error && (
+                                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100px', color: '#94a3b8', fontSize: '0.75rem', gap: '0.4rem' }}>
+                                                                <div style={{ width: 16, height: 16, borderRadius: '50%', border: '2px solid #e2e8f0', borderTopColor: '#2563eb', animation: 'spin 0.7s linear infinite' }} />
+                                                                Loading…
+                                                            </div>
+                                                        )}
+                                                        <img
+                                                            src={upImgUrl}
+                                                            alt="Update attachment"
+                                                            onLoad={() => setUpdateImagesState(prev => ({ ...prev, [update.id]: { loaded: true } }))}
+                                                            onError={() => setUpdateImagesState(prev => ({ ...prev, [update.id]: { loaded: true, error: true } }))}
+                                                            style={{
+                                                                display: upState.error ? 'none' : 'block',
+                                                                width: '100%', maxHeight: '200px',
+                                                                objectFit: 'contain', borderRadius: '0.4rem',
+                                                                opacity: upState.loaded ? 1 : 0,
+                                                                transition: 'opacity 0.3s ease',
+                                                            }}
+                                                        />
+                                                        {upState.error && (
+                                                            <div style={{ textAlign: 'center', color: '#94a3b8', fontSize: '0.75rem', padding: '0.75rem' }}>Image unavailable</div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
-                                    )}
-                                    <img
-                                        src={mainImageUrl}
-                                        alt="Complaint attachment"
-                                        className={`w-full object-contain mx-auto transition-opacity duration-300 ${
-                                            imageLoaded ? 'opacity-100' : 'opacity-0'
-                                        }`}
-                                        style={{ maxHeight: '400px' }}
-                                        onLoad={handleImageLoad}
-                                        onError={handleImageError}
-                                    />
-                                </div>
+                                    );
+                                })}
+                            </div>
+                        ) : (
+                            <div style={{
+                                textAlign: 'center', padding: '2rem 1rem',
+                                background: '#f8fafc', borderRadius: '0.9rem',
+                                border: '1px dashed #cbd5e1',
+                                color: '#94a3b8', fontSize: '0.875rem',
+                            }}>
+                                <span style={{ display: 'block', fontSize: '1.75rem', marginBottom: '0.4rem' }}>📭</span>
+                                No updates have been added yet.
                             </div>
                         )}
-
-                        {/* Updates Section */}
-                        <div>
-                            <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                                Updates
-                                {complaint.updates?.length > 0 && (
-                                    <span className="ml-2 text-sm font-normal text-gray-500">
-                                        ({complaint.updates.length})
-                                    </span>
-                                )}
-                            </h3>
-                            {complaint.updates?.length > 0 ? (
-                                <div className="space-y-4">
-                                    {complaint.updates.map((update, index) => {
-                                        const updateImageUrl = update.photoUrl ? getImageUrl(update.photoUrl) : null;
-                                        const isUpdateImageLoaded = updateImagesLoaded[update.id];
-
-                                        return (
-                                            <div
-                                                key={update.id}
-                                                className="bg-gray-50 border border-gray-200 rounded-lg p-4 shadow-sm"
-                                            >
-                                                <div className="flex justify-between items-center mb-3">
-                                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                                        Update #{index + 1}
-                                                    </span>
-                                                    <span className="text-xs text-gray-500">
-                                                        {formatDate(update.createdAt)}
-                                                    </span>
-                                                </div>
-
-                                                {update.newLocation && (
-                                                    <div className="mb-3 bg-white p-2 rounded border border-gray-100">
-                                                        <p className="text-xs text-gray-500 mb-1">📍 Updated location</p>
-                                                        <p className="font-medium text-gray-800 break-words">{update.newLocation}</p>
-                                                    </div>
-                                                )}
-
-                                                <div className="mb-3">
-                                                    <p className="text-xs text-gray-500 mb-1">💬 Comment</p>
-                                                    <p className="text-gray-700 whitespace-pre-wrap break-words bg-white p-3 rounded border border-gray-100">
-                                                        {update.comment}
-                                                    </p>
-                                                </div>
-
-                                                {updateImageUrl && (
-                                                    <div>
-                                                        <p className="text-xs text-gray-500 mb-2">📷 Additional photo</p>
-                                                        <div className="rounded-lg overflow-hidden shadow-sm border border-gray-200 bg-white p-2">
-                                                            {!isUpdateImageLoaded && (
-                                                                <div className="flex items-center justify-center h-32 bg-gray-100 rounded">
-                                                                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-                                                                </div>
-                                                            )}
-                                                            <img
-                                                                src={updateImageUrl}
-                                                                alt="Update attachment"
-                                                                className={`w-full object-contain mx-auto transition-opacity duration-300 ${
-                                                                    isUpdateImageLoaded ? 'opacity-100' : 'opacity-0'
-                                                                }`}
-                                                                style={{ maxHeight: '200px' }}
-                                                                onLoad={() => handleUpdateImageLoad(update.id)}
-                                                                onError={handleImageError}
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            ) : (
-                                <div className="text-center py-8 bg-gray-50 rounded-lg border border-dashed border-gray-300">
-                                    <p className="text-gray-500 italic">
-                                        No updates have been added yet.
-                                    </p>
-                                </div>
-                            )}
-                        </div>
                     </div>
                 </div>
 
-                {/* Footer */}
-                <div className="sticky bottom-0 bg-white px-6 py-4 border-t flex justify-end gap-3 rounded-b-2xl">
+                {/* ── Footer ── */}
+                <div style={{
+                    padding: '1rem 1.5rem',
+                    borderTop: '1px solid #f1f5f9',
+                    background: '#fafbfc',
+                    display: 'flex', justifyContent: 'flex-end',
+                    flexShrink: 0,
+                }}>
                     <button
                         onClick={onClose}
-                        className="px-6 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                        style={{
+                            padding: '0.65rem 1.75rem', borderRadius: '0.65rem',
+                            background: '#2563eb', color: '#fff',
+                            border: 'none', fontWeight: 700, fontSize: '0.9rem',
+                            cursor: 'pointer', transition: 'background 0.15s',
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.background = '#1d4ed8'}
+                        onMouseLeave={e => e.currentTarget.style.background = '#2563eb'}
                     >
                         Close
                     </button>
                 </div>
-                <br />
             </div>
+
+            <style>{`
+                @keyframes spin { to { transform: rotate(360deg); } }
+            `}</style>
         </div>
     );
 }

@@ -1,43 +1,42 @@
-import { useState, useEffect } from "react";
+// AddUpdateModal.jsx
+import { useState, useEffect } from 'react';
 
 function AddUpdateModal({ complaint, onClose, onSuccess }) {
-    const [comment, setComment] = useState("");
-    const [newLocation, setNewLocation] = useState("");
+    const [comment, setComment] = useState('');
+    const [newLocation, setNewLocation] = useState('');
     const [photoFile, setPhotoFile] = useState(null);
     const [photoPreview, setPhotoPreview] = useState(null);
     const [submitting, setSubmitting] = useState(false);
     const [errorMsg, setErrorMsg] = useState(null);
 
     useEffect(() => {
-        // Prevent body scrolling when modal is open
+        const prev = document.body.style.overflow;
         document.body.style.overflow = 'hidden';
-
         return () => {
-            document.body.style.overflow = 'unset';
-            // Clean up preview URL
-            if (photoPreview) {
-                URL.revokeObjectURL(photoPreview);
-            }
+            document.body.style.overflow = prev;
+            if (photoPreview) URL.revokeObjectURL(photoPreview);
         };
-    }, [photoPreview]);
+    }, []);
+
+    // Close on Escape
+    useEffect(() => {
+        const handler = (e) => { if (e.key === 'Escape') onClose(); };
+        window.addEventListener('keydown', handler);
+        return () => window.removeEventListener('keydown', handler);
+    }, [onClose]);
 
     const handleFileChange = (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
-
-        // Clean up previous preview
-        if (photoPreview) {
-            URL.revokeObjectURL(photoPreview);
-        }
-
+        if (photoPreview) URL.revokeObjectURL(photoPreview);
         setPhotoFile(file);
         setPhotoPreview(URL.createObjectURL(file));
     };
 
-    const handleBackdropClick = (e) => {
-        if (e.target === e.currentTarget) {
-            onClose();
-        }
+    const clearFile = () => {
+        if (photoPreview) URL.revokeObjectURL(photoPreview);
+        setPhotoFile(null);
+        setPhotoPreview(null);
     };
 
     const handleSubmit = async (e) => {
@@ -48,30 +47,29 @@ function AddUpdateModal({ complaint, onClose, onSuccess }) {
         setErrorMsg(null);
 
         try {
-            const token = localStorage.getItem("access_token");
-            if (!token) throw new Error("No token found");
+            const token = localStorage.getItem('access_token');
+            if (!token) throw new Error('No authentication token found. Please log in.');
 
             const formData = new FormData();
-            formData.append("comment", comment.trim());
-            if (newLocation.trim()) formData.append("newLocation", newLocation.trim());
-            if (photoFile) formData.append("photo", photoFile);
+            formData.append('comment', comment.trim());
+            if (newLocation.trim()) formData.append('newLocation', newLocation.trim());
+            if (photoFile) formData.append('photo', photoFile);
 
-            const res = await fetch(`http://localhost:8081/api/complaints/${complaint.id}/updates`, {
-                method: "POST",
+            const res = await fetch(`http://localhost:8080/api/complaints/${complaint.id}/updates`, {
+                method: 'POST',
                 headers: { Authorization: `Bearer ${token}` },
                 body: formData,
             });
 
             if (!res.ok) {
                 const err = await res.json().catch(() => ({}));
-                throw new Error(err.error || "Failed to submit update");
+                throw new Error(err.error || `Server error (${res.status})`);
             }
 
-            alert("Update submitted successfully!");
             onSuccess?.();
             onClose();
         } catch (err) {
-            setErrorMsg(err.message || "Something went wrong");
+            setErrorMsg(err.message || 'Something went wrong. Please try again.');
         } finally {
             setSubmitting(false);
         }
@@ -79,133 +77,249 @@ function AddUpdateModal({ complaint, onClose, onSuccess }) {
 
     return (
         <div
-            className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[9999] p-4"
-            onClick={handleBackdropClick}
-            style={{ backdropFilter: 'blur(4px)' }}
+            onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+            style={{
+                position: 'fixed', inset: 0,
+                background: 'rgba(15,23,42,0.55)',
+                backdropFilter: 'blur(6px)',
+                WebkitBackdropFilter: 'blur(6px)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                zIndex: 99999, padding: '1.25rem',
+            }}
         >
-            {/*<div*/}
-            {/*    className="bg-white rounded-2xl shadow-2xl w-full max-w-md transform transition-all duration-300 scale-100"*/}
-            {/*    onClick={(e) => e.stopPropagation()}*/}
-            {/*    style={{ maxHeight: '90vh' }}*/}
-            {/*>*/}
             <div
-                className="card"
                 onClick={(e) => e.stopPropagation()}
-                style={{ maxHeight: '90vh' }}
+                style={{
+                    background: '#ffffff',
+                    borderRadius: '1.25rem',
+                    width: '100%',
+                    maxWidth: '540px',
+                    maxHeight: '90vh',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    boxShadow: '0 32px 64px rgba(15,23,42,0.22), 0 0 0 1px rgba(226,232,240,0.8)',
+                    overflow: 'hidden',
+                }}
             >
-                {/* Header */}
-                <div className="sticky top-0 bg-white z-10 px-6 py-4 border-b flex justify-between items-center rounded-t-2xl">
-                    <h2 className="text-xl font-bold text-gray-900 truncate pr-4">
-                        Add Update – {complaint?.referenceNumber}
-                    </h2>
-                    {/*<button*/}
-                    {/*    onClick={onClose}*/}
-                    {/*    className="text-gray-500 hover:text-gray-800 text-3xl font-light leading-none focus:outline-none w-8 h-8 flex items-center justify-center hover:bg-gray-100 rounded-full flex-shrink-0"*/}
-                    {/*>*/}
-                    {/*    ×*/}
-                    {/*</button>*/}
+                {/* ── Header ── */}
+                <div style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '1.25rem 1.5rem',
+                    borderBottom: '1px solid #f1f5f9',
+                    background: '#fafbfc',
+                    flexShrink: 0,
+                }}>
+                    <div>
+                        <p style={{ margin: 0, fontSize: '0.75rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                            Add Update
+                        </p>
+                        <h2 style={{ margin: '0.2rem 0 0', fontSize: '1.1rem', fontWeight: 700, color: '#0f172a' }}>
+                            {complaint?.referenceNumber}
+                        </h2>
+                    </div>
+                    <button
+                        onClick={onClose}
+                        aria-label="Close"
+                        style={{
+                            width: '36px', height: '36px', borderRadius: '50%',
+                            border: '1px solid #e2e8f0', background: '#fff',
+                            color: '#64748b', fontSize: '1.35rem', lineHeight: 1,
+                            cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            transition: 'all 0.15s', flexShrink: 0,
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.background = '#f1f5f9'; e.currentTarget.style.color = '#0f172a'; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.color = '#64748b'; }}
+                    >
+                        ×
+                    </button>
                 </div>
 
-                {/* Form - scrollable content */}
-                <div className="overflow-y-auto" style={{ maxHeight: 'calc(90vh - 130px)' }}>
-                    <form onSubmit={handleSubmit} className="p-6 space-y-5">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                                Your comment / update *
+                {/* ── Scrollable form body ── */}
+                <div style={{ overflowY: 'auto', flex: 1, padding: '1.5rem' }}>
+                    <form id="add-update-form" onSubmit={handleSubmit}>
+
+                        {errorMsg && (
+                            <div style={{
+                                background: '#fff5f5', border: '1px solid #fecaca',
+                                borderLeft: '3px solid #ef4444',
+                                borderRadius: '0.65rem', padding: '0.75rem 1rem',
+                                marginBottom: '1.1rem', color: '#dc2626', fontSize: '0.85rem',
+                            }}>
+                                {errorMsg}
+                            </div>
+                        )}
+
+                        {/* Comment */}
+                        <div style={{ marginBottom: '1.1rem' }}>
+                            <label style={{ display: 'block', marginBottom: '0.45rem', fontSize: '0.85rem', fontWeight: 700, color: '#334155' }}>
+                                Your comment / update <span style={{ color: '#ef4444' }}>*</span>
                             </label>
                             <textarea
-                                rows="4"
+                                rows={4}
+                                required
                                 value={comment}
                                 onChange={(e) => setComment(e.target.value)}
-                                placeholder="Describe progress, new observations, or additional details..."
-                                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 resize-y min-h-[100px]"
-                                required
                                 disabled={submitting}
+                                placeholder="Describe progress, new observations, or additional details…"
+                                style={{
+                                    width: '100%', boxSizing: 'border-box',
+                                    border: '1px solid #cbd5e1', borderRadius: '0.75rem',
+                                    padding: '0.8rem 0.95rem', fontSize: '0.9rem',
+                                    color: '#1e293b', background: '#f8fafc',
+                                    resize: 'vertical', minHeight: '110px',
+                                    outline: 'none', fontFamily: 'inherit',
+                                    transition: 'border-color 0.15s',
+                                }}
+                                onFocus={e => e.target.style.borderColor = '#2563eb'}
+                                onBlur={e => e.target.style.borderColor = '#cbd5e1'}
                             />
                         </div>
 
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                                Updated location (optional)
+                        {/* Location */}
+                        <div style={{ marginBottom: '1.1rem' }}>
+                            <label style={{ display: 'block', marginBottom: '0.45rem', fontSize: '0.85rem', fontWeight: 700, color: '#334155' }}>
+                                Updated location <span style={{ color: '#94a3b8', fontWeight: 500 }}>(optional)</span>
                             </label>
                             <input
                                 type="text"
                                 value={newLocation}
                                 onChange={(e) => setNewLocation(e.target.value)}
-                                placeholder="e.g. Corner of Main Rd & Church St"
-                                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
                                 disabled={submitting}
+                                placeholder="e.g. Corner of Main Rd & Church St"
+                                style={{
+                                    width: '100%', boxSizing: 'border-box',
+                                    border: '1px solid #cbd5e1', borderRadius: '0.75rem',
+                                    padding: '0.8rem 0.95rem', fontSize: '0.9rem',
+                                    color: '#1e293b', background: '#f8fafc',
+                                    outline: 'none', fontFamily: 'inherit',
+                                    transition: 'border-color 0.15s',
+                                }}
+                                onFocus={e => e.target.style.borderColor = '#2563eb'}
+                                onBlur={e => e.target.style.borderColor = '#cbd5e1'}
                             />
                         </div>
 
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                                Additional photo (optional)
+                        {/* Photo upload */}
+                        <div style={{ marginBottom: '0.5rem' }}>
+                            <label style={{ display: 'block', marginBottom: '0.45rem', fontSize: '0.85rem', fontWeight: 700, color: '#334155' }}>
+                                Additional photo <span style={{ color: '#94a3b8', fontWeight: 500 }}>(optional)</span>
                             </label>
-                            <div className="relative">
-                                <input
-                                    type="file"
-                                    accept="image/*"
-                                    onChange={handleFileChange}
-                                    className="block w-full text-sm text-gray-500
-                                        file:mr-4 file:py-2.5 file:px-5
-                                        file:rounded-lg file:border-0
-                                        file:text-sm file:font-semibold
-                                        file:bg-green-50 file:text-green-700
-                                        hover:file:bg-green-100
-                                        file:cursor-pointer cursor-pointer
-                                        border border-gray-300 rounded-lg
-                                        focus:outline-none focus:ring-2 focus:ring-green-500"
-                                    disabled={submitting}
-                                />
-                            </div>
-                            {photoPreview && (
-                                <div className="mt-3 relative">
-                                    <img
-                                        src={photoPreview}
-                                        alt="Preview"
-                                        className="max-h-32 rounded-lg border border-gray-200 mx-auto object-contain"
+
+                            {!photoFile ? (
+                                <label
+                                    htmlFor="add-update-file-input"
+                                    style={{
+                                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                                        gap: '0.4rem', padding: '1.5rem',
+                                        border: '2px dashed #cbd5e1', borderRadius: '0.9rem',
+                                        background: '#f8fafc', cursor: 'pointer',
+                                        transition: 'all 0.15s',
+                                    }}
+                                    onMouseEnter={e => { e.currentTarget.style.borderColor = '#2563eb'; e.currentTarget.style.background = '#eff6ff'; }}
+                                    onMouseLeave={e => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.background = '#f8fafc'; }}
+                                >
+                                    <span style={{ fontSize: '1.6rem' }}>📷</span>
+                                    <span style={{ fontWeight: 600, color: '#475569', fontSize: '0.875rem' }}>Click to upload photo</span>
+                                    <span style={{ color: '#94a3b8', fontSize: '0.78rem' }}>JPG, PNG, GIF • max 10 MB</span>
+                                    <input
+                                        id="add-update-file-input"
+                                        type="file"
+                                        accept="image/jpeg,image/png,image/gif"
+                                        onChange={handleFileChange}
+                                        disabled={submitting}
+                                        style={{ display: 'none' }}
                                     />
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setPhotoFile(null);
-                                            setPhotoPreview(null);
-                                        }}
-                                        className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-red-600"
-                                    >
-                                        ×
-                                    </button>
+                                </label>
+                            ) : (
+                                <div style={{
+                                    border: '1px solid #bbf7d0', background: '#f0fdf4',
+                                    borderRadius: '0.9rem', padding: '0.75rem',
+                                    position: 'relative',
+                                }}>
+                                    {photoPreview && (
+                                        <img
+                                            src={photoPreview}
+                                            alt="Preview"
+                                            style={{
+                                                display: 'block', width: '100%', maxHeight: '200px',
+                                                objectFit: 'contain', borderRadius: '0.6rem',
+                                                marginBottom: '0.5rem',
+                                            }}
+                                        />
+                                    )}
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                        <span style={{ fontSize: '0.8rem', color: '#166534', fontWeight: 600, wordBreak: 'break-all' }}>
+                                            ✓ {photoFile.name}
+                                        </span>
+                                        <button
+                                            type="button"
+                                            onClick={clearFile}
+                                            style={{
+                                                background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626',
+                                                borderRadius: '0.45rem', padding: '0.25rem 0.65rem',
+                                                fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer',
+                                                flexShrink: 0, marginLeft: '0.75rem',
+                                            }}
+                                        >
+                                            Remove
+                                        </button>
+                                    </div>
                                 </div>
                             )}
                         </div>
-
-                        {errorMsg && (
-                            <div className="text-red-600 text-sm bg-red-50 p-3 rounded-lg border border-red-200">
-                                {errorMsg}
-                            </div>
-                        )}
-
-                        <div className="flex justify-end gap-3 pt-4 border-t">
-                            <button
-                                type="button"
-                                onClick={onClose}
-                                className="px-5 py-2.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition disabled:opacity-50 font-medium"
-                                disabled={submitting}
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                type="submit"
-                                disabled={submitting || !comment.trim()}
-                                className="px-6 py-2.5 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
-                            >
-                                {submitting ? "Submitting..." : "Submit Update"}
-                            </button>
-                        </div>
                     </form>
                 </div>
+
+                {/* ── Footer ── */}
+                <div style={{
+                    padding: '1rem 1.5rem',
+                    borderTop: '1px solid #f1f5f9',
+                    background: '#fafbfc',
+                    display: 'flex', justifyContent: 'flex-end', gap: '0.65rem',
+                    flexShrink: 0,
+                }}>
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        disabled={submitting}
+                        style={{
+                            padding: '0.65rem 1.35rem', borderRadius: '0.65rem',
+                            border: '1px solid #e2e8f0', background: '#fff',
+                            color: '#475569', fontWeight: 600, fontSize: '0.9rem',
+                            cursor: 'pointer', transition: 'all 0.15s',
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
+                        onMouseLeave={e => e.currentTarget.style.background = '#fff'}
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        type="submit"
+                        form="add-update-form"
+                        disabled={submitting || !comment.trim()}
+                        style={{
+                            padding: '0.65rem 1.75rem', borderRadius: '0.65rem',
+                            background: submitting || !comment.trim() ? '#86efac' : '#16a34a',
+                            color: '#fff', border: 'none',
+                            fontWeight: 700, fontSize: '0.9rem',
+                            cursor: submitting || !comment.trim() ? 'not-allowed' : 'pointer',
+                            transition: 'background 0.15s',
+                            display: 'flex', alignItems: 'center', gap: '0.5rem',
+                        }}
+                        onMouseEnter={e => { if (!submitting && comment.trim()) e.currentTarget.style.background = '#15803d'; }}
+                        onMouseLeave={e => { if (!submitting && comment.trim()) e.currentTarget.style.background = '#16a34a'; }}
+                    >
+                        {submitting ? (
+                            <>
+                                <span style={{ width: 14, height: 14, borderRadius: '50%', border: '2px solid rgba(255,255,255,0.4)', borderTopColor: '#fff', animation: 'spin 0.7s linear infinite', display: 'inline-block' }} />
+                                Submitting…
+                            </>
+                        ) : 'Submit Update'}
+                    </button>
+                </div>
             </div>
+
+            <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
         </div>
     );
 }
