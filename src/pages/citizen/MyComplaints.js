@@ -21,7 +21,7 @@ function MyComplaints() {
             return;
         }
         try {
-            const response = await fetch("http://localhost:8080/api/complaints", {
+            const response = await fetch("http://localhost:8081/api/complaints", {
                 headers: {
                     Authorization: `Bearer ${token}`,
                 },
@@ -60,7 +60,7 @@ function MyComplaints() {
         let filename = photoUrl;
         if (photoUrl.includes("/")) filename = photoUrl.split("/").pop();
         if (photoUrl.includes("\\")) filename = photoUrl.split("\\").pop();
-        return `http://localhost:8080/api/files/${filename}`;
+        return `http://localhost:8081/api/files/${filename}`;
     };
 
     const handleImageError = (complaintId, imageType = "main") => {
@@ -200,3 +200,4 @@ function MyComplaints() {
 }
 
 export default MyComplaints;
+
