@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
-import api from "../../api/api";
+// import { useEffect, useState } from "react";
+import { useState } from "react";
+// import api from "../../api/api";
 import purposeImage from "../../assets/header-image.jpg";
 import "./Home.css";
 import {
@@ -30,15 +31,15 @@ function Home() {
         setIsRegisterOpen(true);
     };
 
-    useEffect(() => {
-        api.get("/api/test")
-            .then(res => {
-                console.log("Backend:", res.data.message);
-            })
-            .catch(err => {
-                console.error("Backend error:", err);
-            });
-    }, []);
+    // useEffect(() => {
+    //     api.get("/test")
+    //         .then(res => {
+    //             console.log("Backend:", res.data.message);
+    //         })
+    //         .catch(err => {
+    //             console.error("Backend error:", err);
+    //         });
+    // }, []);
 
     return (
         <div className="home-container">

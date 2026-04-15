@@ -1,6 +1,7 @@
-import "../../styles/dashboard.css";
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { Plus } from "lucide-react";
+import api from "../../api/api";   // ✅ using your configured axios instance
+import "../../styles/dashboard.css";
 
 function SubmitComplaint() {
     const [category, setCategory] = useState("");
@@ -14,29 +15,22 @@ function SubmitComplaint() {
 
     useEffect(() => {
         return () => {
-            if (previewUrl) {
-                URL.revokeObjectURL(previewUrl);
-            }
+            if (previewUrl) URL.revokeObjectURL(previewUrl);
         };
     }, [previewUrl]);
 
     const handleFileChange = (event) => {
         const file = event.target.files?.[0];
         if (!file) return;
-
         if (file.size > 10 * 1024 * 1024) {
             setError("File is too large (max 10 MB)");
             event.target.value = "";
             return;
         }
-
         setSelectedFile(file);
         setError(null);
-
         if (file.type.startsWith("image/")) {
-            if (previewUrl) {
-                URL.revokeObjectURL(previewUrl);
-            }
+            if (previewUrl) URL.revokeObjectURL(previewUrl);
             setPreviewUrl(URL.createObjectURL(file));
         } else {
             setPreviewUrl(null);
@@ -68,40 +62,27 @@ function SubmitComplaint() {
 
         try {
             const formData = new FormData();
+            // ⚠️ No 'title' field – backend must handle missing title (e.g., set default)
             const complaintData = { category, location, description };
             formData.append("data", new Blob([JSON.stringify(complaintData)], { type: "application/json" }));
-
             if (selectedFile) {
                 formData.append("photo", selectedFile);
             }
 
-            const response = await fetch("http://localhost:8080/api/complaints", {
-                method: "POST",
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                },
-                body: formData,
+            // ✅ Using your api instance (baseURL + token automatically added)
+            const response = await api.post("/complaints", formData, {
+                headers: { "Content-Type": "multipart/form-data" }
             });
 
-            if (!response.ok) {
-                let errorData;
-                try {
-                    errorData = await response.json();
-                } catch {
-                    errorData = {};
-                }
-                throw new Error(errorData.error || errorData.message || `Server responded with status ${response.status}`);
-            }
-
-            const data = await response.json();
-            setMessage(`Complaint submitted! Reference: ${data.referenceNumber || "-"}`);
+            setMessage(`Complaint submitted! Reference: ${response.data.referenceNumber || "-"}`);
             setCategory("");
             setLocation("");
             setDescription("");
             clearFile();
-        } catch (submissionError) {
-            setError(submissionError.message || "Failed to submit complaint");
-            console.error("Submission error:", submissionError);
+        } catch (err) {
+            const backendMessage = err.response?.data?.error || err.response?.data?.message || err.message;
+            setError(backendMessage || "Failed to submit complaint");
+            console.error("Submission error:", err);
         } finally {
             setLoading(false);
         }
@@ -117,15 +98,15 @@ function SubmitComplaint() {
                 <button className="citizen-v2-primary-btn" type="button"><Plus size={16} /> Save Draft</button>
             </section>
 
-            {message ? <p className="subtitle" style={{ color: "#15803d" }}>{message}</p> : null}
-            {error ? <p className="subtitle" style={{ color: "#dc2626" }}>{error}</p> : null}
+            {message && <p className="subtitle" style={{ color: "#15803d" }}>{message}</p>}
+            {error && <p className="subtitle" style={{ color: "#dc2626" }}>{error}</p>}
 
             <article className="citizen-v2-card submit-card">
                 <form onSubmit={handleSubmit}>
                     <div className="form-grid">
                         <label>
                             <span>Category</span>
-                            <select value={category} onChange={(event) => setCategory(event.target.value)} required>
+                            <select value={category} onChange={(e) => setCategory(e.target.value)} required>
                                 <option value="">Select category</option>
                                 <option>Infrastructure & Roads</option>
                                 <option>Water & Sanitation</option>
@@ -141,7 +122,7 @@ function SubmitComplaint() {
                                 type="text"
                                 placeholder="Enter address or use current location"
                                 value={location}
-                                onChange={(event) => setLocation(event.target.value)}
+                                onChange={(e) => setLocation(e.target.value)}
                                 required
                             />
                         </label>
@@ -153,7 +134,7 @@ function SubmitComplaint() {
                             rows="6"
                             placeholder="Describe the issue in detail"
                             value={description}
-                            onChange={(event) => setDescription(event.target.value)}
+                            onChange={(e) => setDescription(e.target.value)}
                             required
                         />
                     </label>
@@ -169,14 +150,14 @@ function SubmitComplaint() {
                                 <>
                                     <p>{selectedFile.name}</p>
                                     <small>{(selectedFile.size / 1048576).toFixed(2)} MB</small>
-                                    {previewUrl ? (
+                                    {previewUrl && (
                                         <img
                                             src={previewUrl}
                                             alt="Preview"
                                             className="max-h-48 mx-auto rounded-lg shadow-sm object-contain"
                                             style={{ marginTop: "1rem" }}
                                         />
-                                    ) : null}
+                                    )}
                                 </>
                             )}
                         </label>
@@ -187,7 +168,7 @@ function SubmitComplaint() {
                             onChange={handleFileChange}
                             className="hidden"
                         />
-                        {selectedFile ? (
+                        {selectedFile && (
                             <div className="mt-3 text-center">
                                 <button
                                     type="button"
@@ -197,7 +178,7 @@ function SubmitComplaint() {
                                     Remove / Change file
                                 </button>
                             </div>
-                        ) : null}
+                        )}
                     </div>
 
                     <div className="submit-actions">
