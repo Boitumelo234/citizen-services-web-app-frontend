@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
     AlertTriangle,
@@ -12,6 +13,7 @@ import {
     Zap,
 } from "lucide-react";
 import "../../styles/dashboard.css";
+import { getDashboard } from "../../services/citizenService";
 
 const iconMap = {
     "Infrastructure & Roads": { icon: AlertTriangle, iconClass: "cat-orange" },
@@ -22,22 +24,35 @@ const iconMap = {
 const defaultIcon = { icon: AlertTriangle, iconClass: "cat-orange" };
 
 function CitizenDashboard() {
-    const dashboard = {
+    const [dashboard, setDashboard] = useState({
         citizenName: "Citizen",
-        totalComplaints: 5,
-        resolvedThisMonth: 2,
+        totalComplaints: 0,
+        resolvedThisMonth: 0,
         unreadNotifications: 0,
-        categories: [
-            { name: "Infrastructure & Roads", count: 2 },
-            { name: "Water & Sanitation", count: 2 },
-            { name: "Electricity & Energy", count: 1 },
-        ],
-        recentComplaints: [
-            { id: "RUST-7841", title: "Large pothole near Shoprite", category: "Infrastructure & Roads", status: "In Progress", date: "20 Feb 2026" },
-            { id: "RUST-7832", title: "Burst pipe in ward 12", category: "Water & Sanitation", status: "Resolved", date: "18 Feb 2026" },
-            { id: "RUST-7829", title: "Streetlight outage", category: "Electricity & Energy", status: "Pending", date: "15 Feb 2026" },
-        ],
-    };
+        categories: [],
+        recentComplaints: [],
+    });
+    const [error, setError] = useState("");
+
+    useEffect(() => {
+        const loadDashboard = async () => {
+            try {
+                const data = await getDashboard();
+                setDashboard({
+                    citizenName: data.citizenName || "Citizen",
+                    totalComplaints: data.totalComplaints || 0,
+                    resolvedThisMonth: data.resolvedThisMonth || 0,
+                    unreadNotifications: data.unreadNotifications || 0,
+                    categories: Array.isArray(data.categories) ? data.categories : [],
+                    recentComplaints: Array.isArray(data.recentComplaints) ? data.recentComplaints : [],
+                });
+            } catch (err) {
+                setError(err.response?.data?.error || "Unable to load dashboard");
+            }
+        };
+
+        loadDashboard();
+    }, []);
 
     const complaintCategories = dashboard.categories.map((category) => ({
         ...category,
@@ -74,6 +89,8 @@ function CitizenDashboard() {
                     </Link>
                 </div>
             </section>
+
+            {error ? <p className="subtitle" style={{ color: "#dc2626" }}>{error}</p> : null}
 
             <section className="citizen-v2-grid-two">
                 <article className="citizen-v2-card hero-card">

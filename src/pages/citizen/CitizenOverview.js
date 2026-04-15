@@ -1,27 +1,39 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Plus } from "lucide-react";
 import "../../styles/dashboard.css";
+import { getOverview } from "../../services/citizenService";
 
 function CitizenOverview() {
-    const overview = {
-        lifetimeSubmitted: 5,
-        resolved: 2,
-        open: 3,
-        avgResolutionDays: 4,
-        topCategories: [
-            { name: "Infrastructure & Roads", count: 2 },
-            { name: "Water & Sanitation", count: 2 },
-            { name: "Electricity & Energy", count: 1 },
-        ],
-        monthlyTrend: [
-            { month: "Sep", count: 1 },
-            { month: "Oct", count: 0 },
-            { month: "Nov", count: 1 },
-            { month: "Dec", count: 1 },
-            { month: "Jan", count: 1 },
-            { month: "Feb", count: 1 },
-        ],
-    };
+    const [overview, setOverview] = useState({
+        lifetimeSubmitted: 0,
+        resolved: 0,
+        open: 0,
+        avgResolutionDays: 0,
+        topCategories: [],
+        monthlyTrend: [],
+    });
+    const [error, setError] = useState("");
+
+    useEffect(() => {
+        const loadOverview = async () => {
+            try {
+                const data = await getOverview();
+                setOverview({
+                    lifetimeSubmitted: data.lifetimeSubmitted || 0,
+                    resolved: data.resolved || 0,
+                    open: data.open || 0,
+                    avgResolutionDays: data.avgResolutionDays || 0,
+                    topCategories: Array.isArray(data.topCategories) ? data.topCategories : [],
+                    monthlyTrend: Array.isArray(data.monthlyTrend) ? data.monthlyTrend : [],
+                });
+            } catch (err) {
+                setError(err.response?.data?.error || "Unable to load overview");
+            }
+        };
+
+        loadOverview();
+    }, []);
 
     const stats = [
         { label: "Lifetime Submitted", value: overview.lifetimeSubmitted },
@@ -39,6 +51,8 @@ function CitizenOverview() {
                 </div>
                 <Link to="/citizen/submit" className="citizen-v2-primary-btn"><Plus size={16} /> New Complaint</Link>
             </section>
+
+            {error ? <p className="subtitle" style={{ color: "#dc2626" }}>{error}</p> : null}
 
             <section className="overview-stat-grid">
                 {stats.map((stat) => (
