@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import api from "../../api/api";
 import "../../styles/dashboard.css";
+import "../../styles/admin.css";
 
 const CATEGORY_COLORS = {
     TRANSPORT: "#f59e0b", WATER: "#3b82f6", ELECTRICITY: "#eab308", WASTE: "#22c55e",
