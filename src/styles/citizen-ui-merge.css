@@ -1113,3 +1113,72 @@
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
+/* ==================================================
+   FIX: Sidebar blocking content (keep citizen styling)
+   ================================================== */
+/* Override the old layout that caused overlap */
+.citizen-v2-layout {
+    display: flex !important;
+    min-height: 100vh;
+}
+
+/* Sidebar stays as is but ensure it's not fixed */
+.citizen-v2-sidebar {
+    width: 260px;
+    flex-shrink: 0;
+    position: relative !important;
+}
+
+/* Main content area – takes remaining space */
+.citizen-v2-content {
+    flex: 1;
+    padding: 1.6rem 2rem;
+    overflow-x: auto;
+}
+
+/* Remove any left margins/paddings that were added as hacks */
+.citizen-v2-page,
+.dashboard-container {
+    margin-left: 0 !important;
+    padding-left: 0 !important;
+    width: 100% !important;
+}
+
+/* ==================================================
+   FIX: Modals appear on top and scrollable
+   ================================================== */
+/* Modal backdrop (overlay) */
+.fixed.inset-0 {
+    z-index: 99999 !important;
+    backdrop-filter: blur(4px);
+}
+
+/* Modal content container */
+.modal-content,
+div[style*="position: fixed"] > div[style*="background: white"],
+div[style*="background: white"][style*="border-radius"] {
+    max-height: 85vh !important;
+    overflow-y: auto !important;
+}
+
+/* Custom scrollbar inside modal */
+.modal-content::-webkit-scrollbar,
+div[style*="overflow-y: auto"]::-webkit-scrollbar {
+    width: 6px;
+}
+.modal-content::-webkit-scrollbar-track,
+div[style*="overflow-y: auto"]::-webkit-scrollbar-track {
+    background: #e2e8f0;
+    border-radius: 3px;
+}
+.modal-content::-webkit-scrollbar-thumb,
+div[style*="overflow-y: auto"]::-webkit-scrollbar-thumb {
+    background: #2563eb;
+    border-radius: 3px;
+}
+
+/* Prevent body scroll when modal is open */
+body.modal-open {
+    overflow: hidden !important;
+}
+
