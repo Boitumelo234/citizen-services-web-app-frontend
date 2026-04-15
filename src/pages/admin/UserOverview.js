@@ -7,7 +7,7 @@ function UserOverview() {
   const [data, setData] = useState(null);
 
   useEffect(() => {
-    axios.get("http://localhost:8081/api/admin/user-overview")
+    axios.get("http://localhost:8080/api/admin/user-overview")
       .then(res => setData(res.data));
   }, []);
 

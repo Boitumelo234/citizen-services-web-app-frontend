@@ -1,11 +1,9 @@
-import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
     AlertTriangle,
     Bell,
     Droplets,
     Eye,
-    LoaderCircle,
     Map as MapIcon,
     Navigation,
     Plus,
@@ -14,7 +12,6 @@ import {
     Zap,
 } from "lucide-react";
 import "../../styles/dashboard.css";
-import { getDashboard } from "../../services/citizenService";
 
 const iconMap = {
     "Infrastructure & Roads": { icon: AlertTriangle, iconClass: "cat-orange" },
@@ -25,38 +22,22 @@ const iconMap = {
 const defaultIcon = { icon: AlertTriangle, iconClass: "cat-orange" };
 
 function CitizenDashboard() {
-    const [dashboard, setDashboard] = useState({
+    const dashboard = {
         citizenName: "Citizen",
-        totalComplaints: 0,
-        resolvedThisMonth: 0,
+        totalComplaints: 5,
+        resolvedThisMonth: 2,
         unreadNotifications: 0,
-        categories: [],
-        recentComplaints: [],
-    });
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState("");
-
-    useEffect(() => {
-        const loadDashboard = async () => {
-            try {
-                const data = await getDashboard();
-                setDashboard({
-                    citizenName: data.citizenName || "Citizen",
-                    totalComplaints: data.totalComplaints || 0,
-                    resolvedThisMonth: data.resolvedThisMonth || 0,
-                    unreadNotifications: data.unreadNotifications || 0,
-                    categories: Array.isArray(data.categories) ? data.categories : [],
-                    recentComplaints: Array.isArray(data.recentComplaints) ? data.recentComplaints : [],
-                });
-            } catch (err) {
-                setError(err.response?.data?.error || "Unable to load dashboard");
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        loadDashboard();
-    }, []);
+        categories: [
+            { name: "Infrastructure & Roads", count: 2 },
+            { name: "Water & Sanitation", count: 2 },
+            { name: "Electricity & Energy", count: 1 },
+        ],
+        recentComplaints: [
+            { id: "RUST-7841", title: "Large pothole near Shoprite", category: "Infrastructure & Roads", status: "In Progress", date: "20 Feb 2026" },
+            { id: "RUST-7832", title: "Burst pipe in ward 12", category: "Water & Sanitation", status: "Resolved", date: "18 Feb 2026" },
+            { id: "RUST-7829", title: "Streetlight outage", category: "Electricity & Energy", status: "Pending", date: "15 Feb 2026" },
+        ],
+    };
 
     const complaintCategories = dashboard.categories.map((category) => ({
         ...category,
@@ -84,30 +65,26 @@ function CitizenDashboard() {
                     </div>
                 </div>
                 <div className="header-actions">
-                    <Link className="notif-btn" aria-label="Notifications" to="/citizen/notifications">
+                    <button className="notif-btn" aria-label="Notifications" type="button">
                         <Bell size={18} />
                         {dashboard.unreadNotifications > 0 ? <span /> : null}
-                    </Link>
+                    </button>
                     <Link to="/citizen/submit" className="citizen-v2-primary-btn">
                         <Plus size={16} /> New Complaint
                     </Link>
                 </div>
             </section>
 
-            {error ? <p className="subtitle" style={{ color: "#dc2626" }}>{error}</p> : null}
-
             <section className="citizen-v2-grid-two">
                 <article className="citizen-v2-card hero-card">
                     <p className="muted">Total Complaints <Eye size={14} /></p>
-                    <h2>{loading ? <LoaderCircle size={28} className="animate-spin" /> : dashboard.totalComplaints}</h2>
+                    <h2>{dashboard.totalComplaints}</h2>
                     <small>Across {complaintCategories.length || 0} departments</small>
                 </article>
                 <article className="citizen-v2-card insight-card">
                     <p className="muted badge"><Sparkles size={16} /> Smart Insights</p>
                     <p className="insight-copy">
-                        {loading
-                            ? "Loading your latest complaint activity..."
-                            : `${dashboard.resolvedThisMonth} complaints have been resolved this month.`}
+                        {dashboard.resolvedThisMonth} complaints have been resolved this month.
                     </p>
                     <div className="insight-globe" aria-hidden="true">🌍</div>
                 </article>
@@ -118,13 +95,13 @@ function CitizenDashboard() {
                     <article className="citizen-v2-card">
                         <div className="citizen-v2-card-head">
                             <h3>Quick actions</h3>
-                            <Link to="/citizen/overview">See more</Link>
+                            <button type="button">See more</button>
                         </div>
                         <div className="quick-actions rich">
                             <Link to="/citizen/my-complaints"><Search size={20} /> <span>Track</span></Link>
                             <Link to="/citizen/submit"><Plus size={20} /> <span>New Fault</span></Link>
                             <Link to="/citizen/map"><Navigation size={20} /> <span>Map</span></Link>
-                            <Link to="/citizen/notifications"><Bell size={20} /> <span>Alerts</span></Link>
+                            <button type="button"><Sparkles size={20} /> <span>AI Assist</span></button>
                         </div>
                     </article>
 
@@ -133,7 +110,7 @@ function CitizenDashboard() {
                             <h3>Department Categories</h3>
                         </div>
                         <div className="category-list">
-                            {!loading && complaintCategories.length === 0 ? <p className="subtitle">No category data yet.</p> : null}
+                            {complaintCategories.length === 0 ? <p className="subtitle">No category data yet.</p> : null}
                             {complaintCategories.map((cat) => {
                                 const Icon = cat.icon;
                                 return (
@@ -156,7 +133,7 @@ function CitizenDashboard() {
                         <Link to="/citizen/my-complaints">See all</Link>
                     </div>
                     <div className="activity-list">
-                        {!loading && recentComplaints.length === 0 ? <p className="subtitle">No recent complaint activity yet.</p> : null}
+                        {recentComplaints.length === 0 ? <p className="subtitle">No recent complaint activity yet.</p> : null}
                         {recentComplaints.map((complaint) => {
                             const Icon = complaint.icon;
                             return (
@@ -169,7 +146,7 @@ function CitizenDashboard() {
                                             <small>{complaint.date}</small>
                                         </div>
                                     </div>
-                                    <span className={`status ${String(complaint.status || "").toLowerCase().replace(/\s+/g, "-")}`}>
+                                    <span className={`status ${String(complaint.status || "").toLowerCase().replace(" ", "-")}`}>
                                         {complaint.status}
                                     </span>
                                 </div>
@@ -181,10 +158,10 @@ function CitizenDashboard() {
 
             <div className="citizen-mobile-nav">
                 <button className="active" type="button"><MapIcon size={18} /><span>Home</span></button>
-                <Link to="/citizen/my-complaints"><Search size={18} /><span>Records</span></Link>
+                <button type="button"><Search size={18} /><span>Records</span></button>
                 <Link to="/citizen/submit" className="primary"><Plus size={20} /></Link>
-                <Link to="/citizen/map"><Navigation size={18} /><span>Map</span></Link>
-                <Link to="/citizen/notifications"><Bell size={18} /><span>Alerts</span></Link>
+                <button type="button"><Navigation size={18} /><span>Map</span></button>
+                <button type="button"><Bell size={18} /><span>Alerts</span></button>
             </div>
         </div>
     );

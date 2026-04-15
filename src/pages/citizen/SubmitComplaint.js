@@ -75,7 +75,7 @@ function SubmitComplaint() {
                 formData.append("photo", selectedFile);
             }
 
-            const response = await fetch("http://localhost:8081/api/complaints", {
+            const response = await fetch("http://localhost:8080/api/complaints", {
                 method: "POST",
                 headers: {
                     Authorization: `Bearer ${token}`,
@@ -212,4 +212,3 @@ function SubmitComplaint() {
 }
 
 export default SubmitComplaint;
-

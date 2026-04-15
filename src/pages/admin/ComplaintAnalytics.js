@@ -15,7 +15,7 @@ function ComplaintAnalytics() {
   const [data, setData] = useState([]);
 
   useEffect(() => {
-    axios.get("http://localhost:8081/api/admin/complaints-trend")
+    axios.get("http://localhost:8080/api/admin/complaints-trend")
       .then(res => setData(res.data))
       .catch(err => console.error(err));
   }, []);
