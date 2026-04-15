@@ -10,7 +10,7 @@ function ManageComplaints() {
   }, [statusFilter]);
 
   const fetchComplaints = () => {
-    axios.get("http://localhost:8080/api/admin/complaints", {
+    axios.get("http://localhost:8081/api/admin/complaints", {
       params: { status: statusFilter }
     })
       .then(res => setComplaints(res.data))
@@ -18,7 +18,7 @@ function ManageComplaints() {
   };
 
   const updateStatus = (id, newStatus) => {
-    axios.put(`http://localhost:8080/api/admin/complaints/${id}/status`, {
+    axios.put(`http://localhost:8081/api/admin/complaints/${id}/status`, {
       status: newStatus
     }).then(fetchComplaints);
   };
