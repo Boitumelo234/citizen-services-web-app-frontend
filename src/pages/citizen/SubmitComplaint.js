@@ -211,4 +211,5 @@ function SubmitComplaint() {
     );
 }
 
-export default SubmitComplaint;
+export default SubmitComplaint
+

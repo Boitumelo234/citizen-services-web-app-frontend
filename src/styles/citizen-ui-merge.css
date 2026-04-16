@@ -1181,4 +1181,3 @@ div[style*="overflow-y: auto"]::-webkit-scrollbar-thumb {
 body.modal-open {
     overflow: hidden !important;
 }
-
