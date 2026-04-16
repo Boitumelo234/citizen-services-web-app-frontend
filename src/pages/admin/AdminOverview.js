@@ -12,17 +12,17 @@ const STATUS_COLORS = {
 };
 const DEPT_ICONS = { TRANSPORT: "🚌", WATER: "💧", ELECTRICITY: "⚡", WASTE: "♻️" };
 
-function timeAgo(dateStr) {
-    if (!dateStr) return "—";
-    const diff = Date.now() - new Date(dateStr).getTime();
-    const mins = Math.floor(diff / 60000);
-    const hrs  = Math.floor(mins / 60);
-    const days = Math.floor(hrs / 24);
-    if (days > 0)  return `${days}d ago`;
-    if (hrs > 0)   return `${hrs}h ago`;
-    if (mins > 0)  return `${mins}m ago`;
-    return "just now";
-}
+// function timeAgo(dateStr) {
+//     if (!dateStr) return "—";
+//     const diff = Date.now() - new Date(dateStr).getTime();
+//     const mins = Math.floor(diff / 60000);
+//     const hrs  = Math.floor(mins / 60);
+//     const days = Math.floor(hrs / 24);
+//     if (days > 0)  return `${days}d ago`;
+//     if (hrs > 0)   return `${hrs}h ago`;
+//     if (mins > 0)  return `${mins}m ago`;
+//     return "just now";
+// }
 
 function StatCard({ label, value, icon, color, sub }) {
     return (

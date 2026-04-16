@@ -1,7 +1,6 @@
 import "../../styles/dashboard.css";
 import { useEffect, useState } from "react";
 import { Plus } from "lucide-react";
-import api from "../../api/api";   // ✅ using your configured axios instance
 
 function SubmitComplaint() {
     const [category, setCategory] = useState("");

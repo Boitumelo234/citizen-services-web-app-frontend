@@ -190,18 +190,18 @@ function ComplaintTimeline({ complaint }) {
     );
 }
 
-function SectionLabel({ children }) {
-    return (
-        <p style={{
-            margin: "1.25rem 0 0.65rem",
-            fontSize: "0.7rem", fontWeight: 700,
-            color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.08em",
-            paddingBottom: "0.5rem", borderBottom: "1px solid #e5e7eb",
-        }}>
-            {children}
-        </p>
-    );
-}
+// function SectionLabel({ children }) {
+//     return (
+//         <p style={{
+//             margin: "1.25rem 0 0.65rem",
+//             fontSize: "0.7rem", fontWeight: 700,
+//             color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.08em",
+//             paddingBottom: "0.5rem", borderBottom: "1px solid #e5e7eb",
+//         }}>
+//             {children}
+//         </p>
+//     );
+// }
 
 const inputStyle = {
     width: "100%", boxSizing: "border-box",
@@ -212,39 +212,44 @@ const inputStyle = {
     transition: "border-color 0.15s",
 };
 
-// ── COMPLAINTS TAB ─────────────────────────────────────────────
 function ComplaintsTab() {
-    const [complaints, setComplaints]       = useState([]);
-    const [loading, setLoading]             = useState(true);
-    const [filter, setFilter]               = useState({ status: "", priority: "", category: "" });
-    const [selected, setSelected]           = useState(null);
-    const [staff, setStaff]                 = useState([]);
+    const [complaints, setComplaints]   = useState([]);
+    const [loading, setLoading]         = useState(true);
+    const [filter, setFilter]           = useState({ status: "", priority: "", category: "" });
+    const [selected, setSelected]       = useState(null);
+    const [staff, setStaff]             = useState([]);
     const [assignStaffId, setAssignStaffId] = useState("");
     const [actionLoading, setActionLoading] = useState(false);
-    const [toast, setToast]                 = useState(null);
-    const [checkedIds, setCheckedIds]       = useState(new Set());
+    const [toast, setToast]             = useState(null);
+    const [checkedIds, setCheckedIds]   = useState(new Set());
 
     const showToast = (msg, type = "success") => {
         setToast({ msg, type });
-        setTimeout(() => setToast(null), 3500);
+        setTimeout(() => setToast(null), 3000);
     };
 
     const fetchComplaints = useCallback(async () => {
         setLoading(true);
         try {
             const params = new URLSearchParams();
-            if (filter.status)   params.set("status",   filter.status);
+            if (filter.status)   params.set("status", filter.status);
             if (filter.priority) params.set("priority", filter.priority);
             if (filter.category) params.set("category", filter.category);
+
             const res = await api.get(`/admin/complaints?${params}`);
             setComplaints(res.data);
             setCheckedIds(new Set());
-        } catch { showToast("Failed to load complaints", "error"); }
+        } catch {
+            showToast("Failed to load complaints", "error");
+        }
         setLoading(false);
     }, [filter]);
 
     useEffect(() => { fetchComplaints(); }, [fetchComplaints]);
-    useEffect(() => { api.get("/admin/users?role=STAFF").then(r => setStaff(r.data)).catch(() => {}); }, []);
+
+    useEffect(() => {
+        api.get("/admin/users?role=STAFF").then(r => setStaff(r.data)).catch(() => {});
+    }, []);
 
     const handleAssign = async (id) => {
         if (!assignStaffId) return;
@@ -252,8 +257,12 @@ function ComplaintsTab() {
         try {
             await api.put(`/admin/complaints/${id}/assign`, { staffId: assignStaffId });
             showToast("Complaint assigned successfully");
-            fetchComplaints(); setSelected(null);
-        } catch { showToast("Failed to assign complaint", "error"); }
+            fetchComplaints();
+            setSelected(null);
+            setAssignStaffId("");
+        } catch {
+            showToast("Failed to assign complaint", "error");
+        }
         setActionLoading(false);
     };
 
@@ -261,9 +270,12 @@ function ComplaintsTab() {
         setActionLoading(true);
         try {
             await api.put(`/admin/complaints/${id}/escalate`);
-            showToast("Escalated to CRITICAL");
-            fetchComplaints(); setSelected(null);
-        } catch { showToast("Escalation failed", "error"); }
+            showToast("Complaint escalated to CRITICAL");
+            fetchComplaints();
+            setSelected(null);
+        } catch {
+            showToast("Escalation failed", "error");
+        }
         setActionLoading(false);
     };
 
@@ -271,38 +283,64 @@ function ComplaintsTab() {
         setActionLoading(true);
         try {
             await api.put(`/admin/complaints/${id}/status`, { status });
-            showToast(`Status → ${status}`);
+            showToast(`Status updated to ${status}`);
             fetchComplaints();
-        } catch { showToast("Status update failed", "error"); }
+        } catch {
+            showToast("Status update failed", "error");
+        }
         setActionLoading(false);
     };
 
-    const toggleCheck = (id) => setCheckedIds(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
-    const toggleAll   = () => setCheckedIds(checkedIds.size === complaints.length ? new Set() : new Set(complaints.map(c => c.id)));
+    // Bulk actions
+    const toggleCheck = (id) => setCheckedIds(prev => {
+        const s = new Set(prev);
+        s.has(id) ? s.delete(id) : s.add(id);
+        return s;
+    });
 
-    const bulkAction = async (fn, label) => {
+    const toggleAll = () => setCheckedIds(
+        checkedIds.size === complaints.length ? new Set() : new Set(complaints.map(c => c.id))
+    );
+
+    const bulkEscalate = async () => {
         if (checkedIds.size === 0) return;
         setActionLoading(true);
-        for (const id of checkedIds) { try { await fn(id); } catch {} }
-        showToast(`${label} ${checkedIds.size} complaint(s)`);
-        fetchComplaints(); setActionLoading(false);
+        for (const id of checkedIds) {
+            try { await api.put(`/admin/complaints/${id}/escalate`); } catch {}
+        }
+        showToast(`Escalated ${checkedIds.size} complaint(s)`);
+        fetchComplaints();
+        setActionLoading(false);
     };
 
+    const bulkResolve = async () => {
+        if (checkedIds.size === 0) return;
+        setActionLoading(true);
+        for (const id of checkedIds) {
+            try { await api.put(`/admin/complaints/${id}/status`, { status: "RESOLVED" }); } catch {}
+        }
+        showToast(`Resolved ${checkedIds.size} complaint(s)`);
+        fetchComplaints();
+        setActionLoading(false);
+    };
+
+    // Workload map
     const workloadMap = {};
     complaints.forEach(c => {
-        if (c.assignedToId && c.status !== "RESOLVED") workloadMap[c.assignedToId] = (workloadMap[c.assignedToId] || 0) + 1;
+        if (c.assignedToId && c.status !== "RESOLVED") {
+            workloadMap[c.assignedToId] = (workloadMap[c.assignedToId] || 0) + 1;
+        }
     });
 
     return (
         <div className="tab-content">
-            <Toast msg={toast?.msg} type={toast?.type} />
+            {toast && <div className={`toast toast-${toast.type}`}>{toast.msg}</div>}
 
             <div className="tab-toolbar">
                 <div className="filters">
-                    {[
-                        ["status",   "Status",   "PENDING,ASSIGNED,IN_PROGRESS,RESOLVED,DECLINED"],
-                        ["priority", "Priority", "LOW,MEDIUM,HIGH,CRITICAL"],
-                        ["category", "Category", "TRANSPORT,WATER,ELECTRICITY,WASTE"],
+                    {[["status","Status","PENDING,ASSIGNED,IN_PROGRESS,RESOLVED,DECLINED"],
+                        ["priority","Priority","LOW,MEDIUM,HIGH,CRITICAL"],
+                        ["category","Category","TRANSPORT,WATER,ELECTRICITY,WASTE"]
                     ].map(([key, label, opts]) => (
                         <select key={key} value={filter[key]}
                                 onChange={e => setFilter(f => ({ ...f, [key]: e.target.value }))}
@@ -318,14 +356,8 @@ function ComplaintsTab() {
                     {checkedIds.size > 0 && (
                         <div className="bulk-actions">
                             <span className="bulk-count">{checkedIds.size} selected</span>
-                            <button className="btn-action escalate" disabled={actionLoading}
-                                    onClick={() => bulkAction(id => api.put(`/admin/complaints/${id}/escalate`), "Escalated")}>
-                                🔴 Escalate All
-                            </button>
-                            <button className="btn-action resolve" disabled={actionLoading}
-                                    onClick={() => bulkAction(id => api.put(`/admin/complaints/${id}/status`, { status: "RESOLVED" }), "Resolved")}>
-                                ✅ Resolve All
-                            </button>
+                            <button className="btn-action escalate" onClick={bulkEscalate} disabled={actionLoading}>🔴 Escalate All</button>
+                            <button className="btn-action resolve"  onClick={bulkResolve}  disabled={actionLoading}>✅ Resolve All</button>
                         </div>
                     )}
                     <button className="btn-outline" onClick={() => exportCSV(complaints, "complaints.csv")}>⬇ Export CSV</button>
@@ -334,55 +366,69 @@ function ComplaintsTab() {
             </div>
 
             {loading ? (
-                <div className="tab-loading">
-                    <div style={{ width: 28, height: 28, borderRadius: "50%", border: "2px solid #e5e7eb", borderTopColor: "#3b82f6", animation: "spin 0.7s linear infinite", margin: "0 auto 0.75rem" }} />
-                    Loading complaints…
-                </div>
+                <div className="tab-loading">Loading complaints…</div>
             ) : (
                 <div className="table-wrap">
                     <table className="data-table">
                         <thead>
                         <tr>
-                            <th style={{ width: 36 }}>
-                                <input type="checkbox" onChange={toggleAll}
-                                       checked={checkedIds.size === complaints.length && complaints.length > 0} />
-                            </th>
-                            <th>#ID</th><th>Title</th><th>Category</th><th>Area</th>
-                            <th>Priority</th><th>Status</th><th>Assigned To</th><th>Age</th><th>Actions</th>
+                            <th><input type="checkbox" onChange={toggleAll} checked={checkedIds.size === complaints.length && complaints.length > 0} /></th>
+                            <th>#ID</th>
+                            <th>Title</th>
+                            <th>Category</th>
+                            <th>Area</th>
+                            <th>Priority</th>
+                            <th>Status</th>
+                            <th>Assigned To (Email)</th>
+                            <th>Photo</th>
+                            <th>Age</th>
+                            <th>Actions</th>
                         </tr>
                         </thead>
                         <tbody>
                         {complaints.length === 0 && (
-                            <tr>
-                                <td colSpan={10} className="empty-row">
-                                    <span style={{ fontSize: "1.5rem", display: "block", marginBottom: "0.4rem" }}>📭</span>
-                                    No complaints match the current filters
-                                </td>
-                            </tr>
+                            <tr><td colSpan={11} className="empty-row">No complaints match the current filters</td></tr>
                         )}
                         {complaints.map(c => (
                             <tr key={c.id} className={checkedIds.has(c.id) ? "row-checked" : ""}>
-                                <td>
-                                    <input type="checkbox" checked={checkedIds.has(c.id)} onChange={() => toggleCheck(c.id)} />
-                                </td>
-                                <td className="mono" style={{ color: "#3b82f6" }}>#{c.id}</td>
-                                <td className="complaint-title" style={{ maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                                    {c.title}
-                                </td>
+                                <td><input type="checkbox" checked={checkedIds.has(c.id)} onChange={() => toggleCheck(c.id)} /></td>
+                                <td className="mono">#{c.id}</td>
+                                <td className="complaint-title">{c.title}</td>
                                 <td><Badge value={c.category} colorMap={{ TRANSPORT:"#f59e0b", WATER:"#3b82f6", ELECTRICITY:"#eab308", WASTE:"#22c55e" }} /></td>
-                                <td style={{ color: "#4b5563", fontSize: "0.8rem" }}>{c.area || "—"}</td>
+                                <td>{c.area}</td>
                                 <td><Badge value={c.priority} colorMap={PRIORITY_COLORS} /></td>
-                                <td><Badge value={c.status}   colorMap={STATUS_COLORS} /></td>
-                                <td style={{ fontSize: "0.8rem", color: c.assignedToName ? "#111827" : "#9ca3af" }}>
-                                    {c.assignedToName || <span style={{ fontStyle: "italic", color: "#9ca3af" }}>Unassigned</span>}
+                                <td><Badge value={c.status} colorMap={STATUS_COLORS} /></td>
+
+                                {/* Assigned Staff Email */}
+                                <td className="assigned-email-cell">
+                                    {c.assignedToUser?.email ||
+                                        c.assignedToEmail ||
+                                        c.assignedTo ||
+                                        "— Unassigned"}
                                 </td>
-                                <td className="mono small" style={{ color: "#6b7280" }}>{timeAgo(c.createdAt)}</td>
+
+                                {/* Complaint Photo Thumbnail */}
+                                <td className="photo-cell">
+                                    {c.photoUrl ? (
+                                        <img
+                                            src={c.photoUrl}
+                                            alt="Complaint"
+                                            className="complaint-thumbnail"
+                                            onClick={() => setSelected(c)}
+                                            title="Click to view full size"
+                                        />
+                                    ) : (
+                                        <span className="no-photo">—</span>
+                                    )}
+                                </td>
+
+                                <td className="mono small age-cell">{timeAgo(c.createdAt)}</td>
                                 <td>
                                     <div className="action-btns">
-                                        <button className="act-btn view"     onClick={() => setSelected(c)}             title="View & Manage">👁</button>
-                                        <button className="act-btn escalate" onClick={() => handleEscalate(c.id)}       title="Escalate to Critical">🔴</button>
+                                        <button className="act-btn view" onClick={() => setSelected(c)} title="View & Manage">👁</button>
+                                        <button className="act-btn escalate" onClick={() => handleEscalate(c.id)} title="Escalate">🔴</button>
                                         {c.status !== "RESOLVED" && (
-                                            <button className="act-btn resolve" onClick={() => handleStatus(c.id, "RESOLVED")} title="Mark Resolved">✅</button>
+                                            <button className="act-btn resolve" onClick={() => handleStatus(c.id, "RESOLVED")} title="Resolve">✅</button>
                                         )}
                                     </div>
                                 </td>
@@ -393,82 +439,89 @@ function ComplaintsTab() {
                 </div>
             )}
 
+            {/* ==================== COMPLAINT DETAIL MODAL ==================== */}
             {selected && (
-                <Modal title={`#${selected.id} — ${selected.title}`} onClose={() => { setSelected(null); setAssignStaffId(""); }} wide>
-                    {/* Info grid */}
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.75rem", marginBottom: "0.5rem" }}>
-                        {[
-                            ["Category",   <Badge value={selected.category} colorMap={{ TRANSPORT:"#f59e0b", WATER:"#3b82f6", ELECTRICITY:"#eab308", WASTE:"#22c55e" }} />],
-                            ["Priority",   <Badge value={selected.priority} colorMap={PRIORITY_COLORS} />],
-                            ["Status",     <Badge value={selected.status}   colorMap={STATUS_COLORS} />],
-                            ["Area",       selected.area || "—"],
-                            ["Citizen",    selected.citizenName || selected.citizenEmail || "—"],
-                            ["Department", selected.departmentName || "—"],
-                        ].map(([label, val]) => (
-                            <div key={label} style={{ background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: "0.75rem", padding: "0.75rem 0.9rem" }}>
-                                <p style={{ margin: 0, fontSize: "0.68rem", fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.35rem" }}>{label}</p>
-                                <div style={{ fontSize: "0.85rem", color: "#111827" }}>{val}</div>
+                <Modal title={`Complaint #${selected.id} — ${selected.title}`} onClose={() => {
+                    setSelected(null);
+                    setAssignStaffId("");
+                }}>
+                    <div className="detail-grid">
+                        <div><label>Category</label><Badge value={selected.category} colorMap={{ TRANSPORT:"#f59e0b", WATER:"#3b82f6", ELECTRICITY:"#eab308", WASTE:"#22c55e" }} /></div>
+                        <div><label>Priority</label><Badge value={selected.priority} colorMap={PRIORITY_COLORS} /></div>
+                        <div><label>Status</label><Badge value={selected.status} colorMap={STATUS_COLORS} /></div>
+                        <div><label>Area</label><span>{selected.area}</span></div>
+                        <div><label>Citizen Email</label><span>{selected.citizenEmail || selected.user?.email || "—"}</span></div>
+                        <div><label>Department</label><span>{selected.departmentName || "—"}</span></div>
+
+                        {/* Complaint Photo - Full View */}
+                        {selected.photoUrl && (
+                            <div className="full photo-section">
+                                <label>Complaint Photo</label>
+                                <img
+                                    src={selected.photoUrl}
+                                    alt="Complaint evidence"
+                                    className="complaint-photo-full"
+                                />
                             </div>
-                        ))}
+                        )}
+
+                        {/* Assigned Staff Email */}
+                        <div className="full assigned-section">
+                            <label>Assigned To (Staff Email)</label>
+                            <div className="assigned-email-box">
+                                {selected.assignedToUser?.email ||
+                                    selected.assignedToEmail ||
+                                    selected.assignedTo ||
+                                    "Not yet assigned"}
+                            </div>
+                        </div>
+
+                        <div className="full"><label>Description</label><p className="desc-text">{selected.description || "No description provided."}</p></div>
                     </div>
 
-                    {selected.description && (
-                        <div style={{ background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: "0.75rem", padding: "0.85rem 1rem", marginBottom: "0.5rem" }}>
-                            <p style={{ margin: "0 0 0.4rem", fontSize: "0.68rem", fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.06em" }}>Description</p>
-                            <p style={{ margin: 0, color: "#4b5563", fontSize: "0.875rem", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{selected.description}</p>
-                        </div>
-                    )}
-
-                    {selected.latitude && (
-                        <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", marginBottom: "0.5rem" }}>
-                            <span style={{ fontSize: "0.75rem", color: "#6b7280" }}>📍</span>
-                            <span style={{ fontFamily: "monospace", fontSize: "0.75rem", color: "#4b5563" }}>
-                                {selected.latitude.toFixed(6)}, {selected.longitude?.toFixed(6)}
-                            </span>
-                        </div>
-                    )}
-
-                    <SectionLabel>📅 Complaint Timeline</SectionLabel>
-                    <ComplaintTimeline complaint={selected} />
-
-                    <SectionLabel>🔧 Assign to Staff</SectionLabel>
-                    <div style={{ display: "flex", gap: "0.65rem" }}>
-                        <select
-                            value={assignStaffId}
-                            onChange={e => setAssignStaffId(e.target.value)}
-                            style={{ ...inputStyle, flex: 1 }}
-                        >
-                            <option value="">Select staff member…</option>
-                            {staff.map(s => {
-                                const load = workloadMap[s.id] || 0;
-                                const indicator = load >= 5 ? "⚠ Busy" : load >= 3 ? "🟡" : "✅";
-                                return (
-                                    <option key={s.id} value={s.id}>
-                                        {indicator} {s.fullName || s.email} ({load} active){s.departmentName ? ` — ${s.departmentName}` : ""}
-                                    </option>
-                                );
-                            })}
-                        </select>
-                        <button
-                            className="btn-primary"
-                            disabled={!assignStaffId || actionLoading}
-                            onClick={() => handleAssign(selected.id)}
-                            style={{ flexShrink: 0 }}
-                        >
-                            {actionLoading ? "Assigning…" : "Assign"}
-                        </button>
+                    {/* Timeline */}
+                    <div className="modal-section">
+                        <div className="section-label">📅 Complaint Timeline</div>
+                        <ComplaintTimeline complaint={selected} />
                     </div>
 
-                    <SectionLabel>⚡ Quick Actions</SectionLabel>
-                    <div style={{ display: "flex", gap: "0.65rem", flexWrap: "wrap" }}>
-                        <button className="btn-action escalate"   disabled={actionLoading} onClick={() => handleEscalate(selected.id)}>🔴 Escalate to Critical</button>
-                        <button className="btn-action resolve"    disabled={actionLoading} onClick={() => handleStatus(selected.id, "RESOLVED")}>✅ Mark Resolved</button>
-                        <button className="btn-action inprogress" disabled={actionLoading} onClick={() => handleStatus(selected.id, "IN_PROGRESS")}>⚙ Set In Progress</button>
+                    {/* Assign to Staff */}
+                    <div className="modal-section">
+                        <div className="section-label">🔧 Assign to Staff</div>
+                        <div className="assign-row">
+                            <select className="filter-select" value={assignStaffId} onChange={e => setAssignStaffId(e.target.value)}>
+                                <option value="">Select staff member…</option>
+                                {staff.map(s => {
+                                    const load = workloadMap[s.id] || 0;
+                                    const indicator = load >= 5 ? "⚠️ Busy" : load >= 3 ? "🟡" : "✅";
+                                    return (
+                                        <option key={s.id} value={s.id}>
+                                            {indicator} {s.email} ({load} active)
+                                        </option>
+                                    );
+                                })}
+                            </select>
+                            <button
+                                className="btn-primary"
+                                disabled={!assignStaffId || actionLoading}
+                                onClick={() => handleAssign(selected.id)}
+                            >
+                                {actionLoading ? "Assigning…" : "Assign"}
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Quick Actions */}
+                    <div className="modal-section">
+                        <div className="section-label">⚡ Quick Actions</div>
+                        <div className="quick-actions">
+                            <button className="btn-action escalate" onClick={() => handleEscalate(selected.id)} disabled={actionLoading}>🔴 Escalate to Critical</button>
+                            <button className="btn-action resolve" onClick={() => handleStatus(selected.id, "RESOLVED")} disabled={actionLoading}>✅ Mark Resolved</button>
+                            <button className="btn-action inprogress" onClick={() => handleStatus(selected.id, "IN_PROGRESS")} disabled={actionLoading}>⚙ Set In Progress</button>
+                        </div>
                     </div>
                 </Modal>
             )}
-
-            <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
         </div>
     );
 }

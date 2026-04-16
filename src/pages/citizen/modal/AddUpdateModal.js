@@ -16,7 +16,7 @@ function AddUpdateModal({ complaint, onClose, onSuccess }) {
             document.body.style.overflow = prev;
             if (photoPreview) URL.revokeObjectURL(photoPreview);
         };
-    }, []);
+    }, [photoPreview]);
 
     // Close on Escape
     useEffect(() => {
