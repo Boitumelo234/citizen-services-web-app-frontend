@@ -1,4 +1,5 @@
 // AdminDashboard.jsx – Light theme, citizen styling
+// import { useEffect, useState, useCallback, useRef } from "react";
 import { useEffect, useState, useCallback } from "react";
 import api from "../../api/api";
 import "../../styles/admin.css";
@@ -801,31 +802,298 @@ function DepartmentsTab() {
     );
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// PASTE THESE TWO FUNCTIONS INTO AdminDashboard.jsx
+// Replace the existing ReportsTab and SettingsTab functions entirely.
+// ─────────────────────────────────────────────────────────────────────────────
+
 // ── REPORTS TAB ────────────────────────────────────────────────
+// Requires: Chart.js loaded via CDN OR import from your build system.
+// Add to your index.html or load lazily (see useEffect below).
+//
+// API endpoints used:
+//   GET /api/admin/reports/summary?days=N
+//   GET /api/admin/reports/staff-performance
+//   GET /api/admin/overview/charts/by-category   ← NEW (already in your controller)
+//   GET /api/admin/overview/charts/by-status      ← NEW (already in your controller)
+//   GET /api/admin/overview/charts/daily          ← NEW (already in your controller)
+// ─────────────────────────────────────────────────────────────────────────────
+
+
+// ── tiny chart helper ──────────────────────────────────────────
+// function ensureChartJs(cb) {
+//     if (window.Chart) { cb(); return; }
+//     const s = document.createElement("script");
+//     s.src = "https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js";
+//     s.onload = cb;
+//     document.head.appendChild(s);
+// }
+
+// function destroyChart(ref) {
+//     if (ref.current) { ref.current.destroy(); ref.current = null; }
+// }
+
+// Bar / Line chart widget
+// function ChartWidget({ type, labels, datasets, height = 220, title }) {
+//     const canvasRef = useRef(null);
+//     const chartRef  = useRef(null);
+//
+//     useEffect(() => {
+//         ensureChartJs(() => {
+//             if (!canvasRef.current) return;
+//             destroyChart(chartRef);
+//
+//             const isDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+//             const gridColor  = isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.07)";
+//             const tickColor  = isDark ? "#9ca3af" : "#6b7280";
+//
+//             chartRef.current = new window.Chart(canvasRef.current, {
+//                 type,
+//                 data: { labels, datasets },
+//                 options: {
+//                     responsive: true,
+//                     maintainAspectRatio: false,
+//                     plugins: {
+//                         legend: { display: datasets.length > 1, position: "top",
+//                             labels: { color: tickColor, boxWidth: 10, font: { size: 11 } } },
+//                         tooltip: { mode: "index", intersect: false },
+//                     },
+//                     scales: type !== "doughnut" ? {
+//                         x: { grid: { color: gridColor }, ticks: { color: tickColor, font: { size: 11 } } },
+//                         y: { grid: { color: gridColor }, ticks: { color: tickColor, font: { size: 11 } }, beginAtZero: true },
+//                     } : undefined,
+//                     animation: { duration: 500 },
+//                 },
+//             });
+//         });
+//         return () => destroyChart(chartRef);
+//     }, [type, labels, datasets]);
+//
+//     return (
+//         <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: "0.75rem", padding: "1rem 1.1rem" }}>
+//             {title && (
+//                 <p style={{ margin: "0 0 0.6rem", fontSize: "0.78rem", fontWeight: 700,
+//                     color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.07em" }}>
+//                     {title}
+//                 </p>
+//             )}
+//             <div style={{ position: "relative", width: "100%", height }}>
+//                 <canvas
+//                     ref={canvasRef}
+//                     role="img"
+//                     aria-label={title || "Chart"}
+//                 />
+//             </div>
+//         </div>
+//     );
+// }
+
+// Stat summary card
+// function StatCard({ label, value, color, sub }) {
+//     return (
+//         <div style={{
+//             background: "#fff", border: "1px solid #e5e7eb", borderRadius: "0.75rem",
+//             padding: "1rem 1.1rem", display: "flex", flexDirection: "column", gap: "0.2rem",
+//         }}>
+//             <p style={{ margin: 0, fontSize: "0.72rem", fontWeight: 700, color: "#6b7280",
+//                 textTransform: "uppercase", letterSpacing: "0.07em" }}>{label}</p>
+//             <p style={{ margin: 0, fontSize: "1.75rem", fontWeight: 700, color: color || "#111827",
+//                 fontFamily: "'Inter', sans-serif", lineHeight: 1.1 }}>{value ?? "—"}</p>
+//             {sub && <p style={{ margin: 0, fontSize: "0.72rem", color: "#9ca3af" }}>{sub}</p>}
+//         </div>
+//     );
+// }
+
+// ── REPORTS TAB ────────────────────────────────────────────────
+// Paste this entire function into AdminDashboard.js, replacing the old ReportsTab.
+
 function ReportsTab() {
-    const [period, setPeriod]   = useState(7);
+    const [period, setPeriod] = useState(7);
     const [summary, setSummary] = useState(null);
-    const [perf, setPerf]       = useState([]);
+    const [perf, setPerf] = useState([]);
+    const [daily, setDaily] = useState([]);
+    const [byCategory, setByCategory] = useState([]);
+    const [byStatus, setByStatus] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [toast, setToast] = useState(null);
+
+    const showToast = (msg, type = "info") => {
+        setToast({ msg, type });
+        setTimeout(() => setToast(null), 3000);
+    };
+
+    // Helper: ensure Chart.js is loaded
+    // const ensureChartJs = (cb) => {
+    //     //     if (window.Chart) {
+    //     //         cb();
+    //     //         return;
+    //     //     }
+    //     //     const script = document.createElement("script");
+    //     //     script.src = "https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js";
+    //     //     script.onload = () => cb();
+    //     //     script.onerror = () => showToast("Failed to load charts", "error");
+    //     //     document.head.appendChild(script);
+    //     // };
 
     const fetchReports = useCallback(async () => {
         setLoading(true);
+        setError(null);
         try {
-            const [sRes, pRes] = await Promise.all([
+            const [sRes, pRes, dRes, cRes, stRes] = await Promise.all([
                 api.get(`/admin/reports/summary?days=${period}`),
                 api.get("/admin/reports/staff-performance"),
+                api.get("/admin/overview/charts/daily"),
+                api.get("/admin/overview/charts/by-category"),
+                api.get("/admin/overview/charts/by-status"),
             ]);
-            setSummary(sRes.data); setPerf(pRes.data);
-        } catch {}
+            setSummary(sRes.data);
+            setPerf(pRes.data);
+            setDaily(dRes.data);
+            setByCategory(cRes.data);
+            setByStatus(stRes.data);
+        } catch (err) {
+            console.error(err);
+            setError("Failed to load report data. Check backend connection.");
+            showToast("Could not load reports", "error");
+        }
         setLoading(false);
     }, [period]);
 
-    useEffect(() => { fetchReports(); }, [fetchReports]);
+    useEffect(() => {
+        fetchReports();
+    }, [fetchReports]);
+
+    const exportStaffCSV = () => {
+        if (!perf.length) return;
+        const headers = ["Staff", "Department", "Assigned", "Resolved", "Declined", "Resolution Rate (%)"];
+        const rows = perf.map(s => [
+            s.name,
+            s.department,
+            s.assigned,
+            s.resolved,
+            s.declined,
+            s.resolutionRate?.toFixed(1) || 0
+        ]);
+        const csv = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+        const blob = new Blob([csv], { type: "text/csv" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "staff-performance.csv";
+        a.click();
+        URL.revokeObjectURL(url);
+    };
+
+    const handlePrint = () => window.print();
+
+    // Chart rendering (will run after data loads and Chart.js is ready)
+    useEffect(() => {
+        if (loading || !window.Chart) return;
+        // Helper to destroy existing charts
+        // const charts = [];
+        const createChart = (canvasId, type, data, options) => {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return null;
+            const ctx = canvas.getContext("2d");
+            // Destroy existing chart instance if any
+            if (canvas.chart) canvas.chart.destroy();
+            const chart = new window.Chart(ctx, { type, data, options });
+            canvas.chart = chart;
+            return chart;
+        };
+
+        // Daily line chart
+        if (daily.length && document.getElementById("dailyChart")) {
+            const labels = daily.map(d => new Date(d.date).toLocaleDateString(undefined, { month: "short", day: "numeric" }));
+            const data = {
+                labels,
+                datasets: [{
+                    label: "Complaints",
+                    data: daily.map(d => d.count),
+                    borderColor: "#3b82f6",
+                    backgroundColor: "rgba(59,130,246,0.1)",
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 4,
+                    pointBackgroundColor: "#3b82f6"
+                }]
+            };
+            createChart("dailyChart", "line", data, { responsive: true, maintainAspectRatio: false });
+        }
+
+        // Category doughnut
+        if (byCategory.length && document.getElementById("categoryChart")) {
+            const categoryColors = { TRANSPORT:"#f59e0b", WATER:"#3b82f6", ELECTRICITY:"#eab308", WASTE:"#22c55e" };
+            const data = {
+                labels: byCategory.map(c => c.category),
+                datasets: [{
+                    data: byCategory.map(c => c.count),
+                    backgroundColor: byCategory.map(c => categoryColors[c.category] || "#6b7280"),
+                    borderWidth: 0
+                }]
+            };
+            createChart("categoryChart", "doughnut", data, { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom" } } });
+        }
+
+        // Status bar chart
+        if (byStatus.length && document.getElementById("statusChart")) {
+            const statusColors = { PENDING:"#ef4444", ASSIGNED:"#f97316", IN_PROGRESS:"#3b82f6", RESOLVED:"#22c55e", DECLINED:"#8b5cf6" };
+            const data = {
+                labels: byStatus.map(s => s.status),
+                datasets: [{
+                    label: "Complaints",
+                    data: byStatus.map(s => s.count),
+                    backgroundColor: byStatus.map(s => statusColors[s.status] || "#6b7280"),
+                    borderRadius: 6
+                }]
+            };
+            createChart("statusChart", "bar", data, { responsive: true, maintainAspectRatio: false });
+        }
+
+        return () => {
+            // Cleanup on unmount
+            ["dailyChart", "categoryChart", "statusChart"].forEach(id => {
+                const canvas = document.getElementById(id);
+                if (canvas && canvas.chart) canvas.chart.destroy();
+            });
+        };
+    }, [loading, daily, byCategory, byStatus]);
+
+    // Load Chart.js once on mount
+    // useEffect(() => {
+    //     ensureChartJs(() => {});
+    // }, [ensureChartsJs]);
 
     const rateColor = (rate) => rate >= 70 ? "#22c55e" : rate >= 40 ? "#f59e0b" : "#ef4444";
 
+    if (loading) {
+        return (
+            <div className="tab-content">
+                <div className="tab-loading">
+                    <div style={{ width: 28, height: 28, borderRadius: "50%", border: "2px solid #e5e7eb", borderTopColor: "#3b82f6", animation: "spin 0.7s linear infinite", margin: "0 auto 0.75rem" }} />
+                    Loading reports…
+                </div>
+                <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="tab-content">
+                <div className="error-state" style={{ textAlign: "center", padding: "2rem", color: "#ef4444" }}>
+                    ⚠️ {error}
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="tab-content">
+            {toast && <div className={`toast toast-${toast.type}`}>{toast.msg}</div>}
+
+            {/* Toolbar */}
             <div className="tab-toolbar">
                 <div className="filters">
                     <select className="filter-select" value={period} onChange={e => setPeriod(Number(e.target.value))}>
@@ -835,150 +1103,470 @@ function ReportsTab() {
                     </select>
                     <button className="btn-outline" onClick={fetchReports}>↻ Reload</button>
                 </div>
-                <button className="btn-outline" onClick={() => perf.length && exportCSV(perf, "staff-performance.csv")}>
-                    ⬇ Export Performance CSV
-                </button>
-            </div>
-            {loading ? (
-                <div className="tab-loading">
-                    <div style={{ width: 28, height: 28, borderRadius: "50%", border: "2px solid #e5e7eb", borderTopColor: "#3b82f6", animation: "spin 0.7s linear infinite", margin: "0 auto 0.75rem" }} />
-                    Loading reports…
+                <div className="toolbar-right">
+                    <button className="btn-outline" onClick={handlePrint}>🖨 Print Report</button>
+                    <button className="btn-outline" onClick={exportStaffCSV} disabled={!perf.length}>⬇ Export Staff CSV</button>
                 </div>
-            ) : (
-                <>
-                    {summary && (
-                        <div className="report-summary">
-                            <div className="report-card">
-                                <div className="report-num">{summary.totalComplaints}</div>
-                                <div className="report-label">Total ({summary.period})</div>
-                            </div>
-                            <div className="report-card">
-                                <div className="report-num" style={{ color: "#22c55e" }}>{summary.resolved}</div>
-                                <div className="report-label">Resolved</div>
-                            </div>
-                            <div className="report-card">
-                                <div className="report-num" style={{ color: rateColor(summary.resolutionRate) }}>
-                                    {summary.resolutionRate?.toFixed(1)}%
-                                </div>
-                                <div className="report-label">Resolution Rate</div>
-                            </div>
-                        </div>
-                    )}
-                    {summary?.hotspots && Object.keys(summary.hotspots).length > 0 && (
-                        <div className="report-section">
-                            <div className="section-label">📍 Hotspot Areas</div>
-                            <div className="hotspot-list">
-                                {Object.entries(summary.hotspots)
-                                    .sort((a, b) => b[1] - a[1])
-                                    .slice(0, 10)
-                                    .map(([area, count], i) => (
-                                        <div key={i} className="hotspot-row">
-                                            <span className="hotspot-rank">#{i + 1}</span>
-                                            <span className="hotspot-area">{area}</span>
-                                            <span className="hotspot-count">{count}</span>
-                                        </div>
-                                    ))}
-                            </div>
-                        </div>
-                    )}
-                    <div className="report-section">
-                        <div className="section-label">👷 Staff Performance</div>
-                        {perf.length === 0 ? (
-                            <div className="no-data">No staff performance data yet</div>
-                        ) : (
-                            <div className="table-wrap">
-                                <table className="data-table">
-                                    <thead>
-                                    <tr><th>Staff</th><th>Department</th><th>Assigned</th><th>Resolved</th><th>Declined</th><th>Rate</th></tr>
-                                    </thead>
-                                    <tbody>
-                                    {perf.map((s, i) => (
-                                        <tr key={i}>
-                                            <td style={{ fontWeight: 600, color: "#111827" }}>{s.name}</td>
-                                            <td style={{ color: "#6b7280", fontSize: "0.8rem" }}>{s.department}</td>
-                                            <td className="mono">{s.assigned}</td>
-                                            <td className="mono" style={{ color: "#166534" }}>{s.resolved}</td>
-                                            <td className="mono" style={{ color: "#b91c1c" }}>{s.declined}</td>
-                                            <td>
-                                                <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
-                                                    <div style={{ flex: 1, background: "#e5e7eb", borderRadius: "3px", height: 8, overflow: "hidden" }}>
-                                                        <div style={{ width: `${s.resolutionRate}%`, height: "100%", background: rateColor(s.resolutionRate), borderRadius: "3px", transition: "width 0.6s ease" }} />
-                                                    </div>
-                                                    <span className="mono small" style={{ color: "#6b7280", minWidth: 36, textAlign: "right" }}>
-                                                        {s.resolutionRate?.toFixed(0)}%
-                                                    </span>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        )}
-                    </div>
-                </>
+            </div>
+
+            {/* Summary Cards */}
+            {summary && (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: "1rem", marginBottom: "1.5rem" }}>
+                    <div className="stat-card"><div className="stat-label">Total ({summary.period})</div><div className="stat-value">{summary.totalComplaints}</div></div>
+                    <div className="stat-card"><div className="stat-label">Resolved</div><div className="stat-value" style={{ color: "#22c55e" }}>{summary.resolved}</div></div>
+                    <div className="stat-card"><div className="stat-label">Resolution Rate</div><div className="stat-value" style={{ color: rateColor(summary.resolutionRate) }}>{summary.resolutionRate?.toFixed(1)}%</div></div>
+                    <div className="stat-card"><div className="stat-label">Pending</div><div className="stat-value" style={{ color: "#ef4444" }}>{summary.byStatus?.PENDING || 0}</div></div>
+                    <div className="stat-card"><div className="stat-label">In Progress</div><div className="stat-value" style={{ color: "#3b82f6" }}>{summary.byStatus?.IN_PROGRESS || 0}</div></div>
+                </div>
             )}
+
+            {/* Charts Row */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "1rem", marginBottom: "1.5rem" }}>
+                <div className="chart-container" style={{ background: "#fff", borderRadius: "0.75rem", padding: "1rem", border: "1px solid #e5e7eb" }}>
+                    <div className="section-label">📈 Daily Complaints</div>
+                    <div style={{ height: "220px", position: "relative" }}>
+                        <canvas id="dailyChart" style={{ width: "100%", height: "100%" }} />
+                    </div>
+                </div>
+                <div className="chart-container" style={{ background: "#fff", borderRadius: "0.75rem", padding: "1rem", border: "1px solid #e5e7eb" }}>
+                    <div className="section-label">📂 By Category</div>
+                    <div style={{ height: "220px", position: "relative" }}>
+                        <canvas id="categoryChart" style={{ width: "100%", height: "100%" }} />
+                    </div>
+                </div>
+                <div className="chart-container" style={{ background: "#fff", borderRadius: "0.75rem", padding: "1rem", border: "1px solid #e5e7eb" }}>
+                    <div className="section-label">⚙️ By Status</div>
+                    <div style={{ height: "220px", position: "relative" }}>
+                        <canvas id="statusChart" style={{ width: "100%", height: "100%" }} />
+                    </div>
+                </div>
+            </div>
+
+            {/* Hotspots */}
+            {summary?.hotspots && Object.keys(summary.hotspots).length > 0 && (
+                <div style={{ marginBottom: "1.5rem", background: "#fff", borderRadius: "0.75rem", padding: "1rem", border: "1px solid #e5e7eb" }}>
+                    <div className="section-label">📍 Hotspot Areas</div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                        {Object.entries(summary.hotspots)
+                            .sort((a,b) => b[1] - a[1])
+                            .slice(0, 10)
+                            .map(([area, count], idx) => (
+                                <div key={area} style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                                    <span style={{ width: 30, fontSize: "0.75rem", color: "#6b7280" }}>#{idx+1}</span>
+                                    <span style={{ flex: 1, fontWeight: 500 }}>{area}</span>
+                                    <div style={{ width: "40%", background: "#e5e7eb", borderRadius: "999px", height: "8px", overflow: "hidden" }}>
+                                        <div style={{ width: `${(count / Math.max(...Object.values(summary.hotspots))) * 100}%`, background: "#3b82f6", height: "100%" }} />
+                                    </div>
+                                    <span style={{ width: 40, textAlign: "right", fontWeight: 700 }}>{count}</span>
+                                </div>
+                            ))}
+                    </div>
+                </div>
+            )}
+
+            {/* Staff Performance Table */}
+            <div style={{ background: "#fff", borderRadius: "0.75rem", padding: "1rem", border: "1px solid #e5e7eb" }}>
+                <div className="section-label">👷 Staff Performance</div>
+                {perf.length === 0 ? (
+                    <div className="no-data">No staff performance data available</div>
+                ) : (
+                    <div className="table-wrap">
+                        <table className="data-table">
+                            <thead>
+                            <tr><th>Staff</th><th>Department</th><th>Assigned</th><th>Resolved</th><th>Declined</th><th>Rate</th><th>Trend</th></tr>
+                            </thead>
+                            <tbody>
+                            {perf.sort((a,b) => b.resolutionRate - a.resolutionRate).map((s, i) => (
+                                <tr key={i}>
+                                    <td><strong>{s.name}</strong></td>
+                                    <td>{s.department}</td>
+                                    <td>{s.assigned}</td>
+                                    <td style={{ color: "#166534" }}>{s.resolved}</td>
+                                    <td style={{ color: "#b91c1c" }}>{s.declined}</td>
+                                    <td>
+                                        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                                            <div style={{ flex: 1, background: "#e5e7eb", borderRadius: 4, height: 6 }}>
+                                                <div style={{ width: `${s.resolutionRate}%`, height: 6, background: rateColor(s.resolutionRate), borderRadius: 4 }} />
+                                            </div>
+                                            <span>{s.resolutionRate?.toFixed(0)}%</span>
+                                        </div>
+                                    </td>
+                                    <td>{s.resolutionRate >= 70 ? "⬆️" : s.resolutionRate >= 40 ? "➡️" : "⬇️"}</td>
+                                </tr>
+                            ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </div>
             <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
         </div>
     );
 }
 
-// ── SETTINGS TAB ───────────────────────────────────────────────
-function SettingsTab() {
-    const settingsData = [
-        {
-            title: "📂 Complaint Categories",
-            items: [
-                "TRANSPORT — Potholes, road damage, traffic lights",
-                "WATER — Leaks, supply issues, burst pipes",
-                "ELECTRICITY — Outages, faulty street lights",
-                "WASTE — Litter, illegal dumping, bin collection",
-            ],
-        },
-        {
-            title: "⚡ Priority Rules",
-            items: [
-                ["🟢 LOW",      "Routine, non-urgent"],
-                ["🟡 MEDIUM",   "Response within 5 days"],
-                ["🟠 HIGH",     "Response within 24 hours"],
-                ["🔴 CRITICAL", "Immediate escalation"],
-            ].map(([p, r]) => `${p} — ${r}`),
-        },
-        {
-            title: "⏱ SLA Thresholds",
-            items: [
-                "Overdue trigger: 3 days unresolved",
-                "Auto-escalation after: 7 days",
-                "Dashboard refresh: every 30 seconds",
-            ],
-        },
-        {
-            title: "🔐 Admin Access",
-            items: [
-                "Admin email configured in application.properties",
-                "JWT token required for all API calls",
-                "Token expires after 24 hours",
-            ],
-        },
-    ];
+// ─────────────────────────────────────────────────────────────────────────────
+// ── SETTINGS TAB ─────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// BACKEND ADDITIONS REQUIRED — see SettingsController.java below.
+// Endpoints:
+//   GET  /api/admin/settings          → { autoRoutingEnabled, adminEmailNotifications, slaOverdueDays, slaAutoEscalateDays }
+//   PUT  /api/admin/settings          → same shape → saves to DB
+//   GET  /api/admin/settings/categories  → string[]
+//   POST /api/admin/settings/categories  → { category: "..." }
+//   DELETE /api/admin/settings/categories/:name
+// ─────────────────────────────────────────────────────────────────────────────
 
+const TOGGLE_STYLE = (on) => ({
+    position: "relative", display: "inline-block", width: 42, height: 24, cursor: "pointer",
+    background: on ? "#3b82f6" : "#d1d5db", borderRadius: 999, transition: "background 0.2s",
+    flexShrink: 0,
+});
+const KNOB_STYLE = (on) => ({
+    position: "absolute", top: 3, left: on ? 21 : 3, width: 18, height: 18,
+    borderRadius: "50%", background: "#ffffff",
+    boxShadow: "0 1px 3px rgba(0,0,0,0.25)", transition: "left 0.2s",
+});
+
+function Toggle({ value, onChange }) {
     return (
-        <div className="tab-content">
-            <div className="settings-grid">
-                {settingsData.map((card, i) => (
-                    <div key={i} className="settings-card">
-                        <div className="settings-card-title">{card.title}</div>
-                        <div className="settings-list">
-                            {card.items.map((item, j) => (
-                                <div key={j} className="settings-item">{item}</div>
-                            ))}
-                        </div>
-                    </div>
-                ))}
+        <div style={TOGGLE_STYLE(value)} onClick={() => onChange(!value)}>
+            <div style={KNOB_STYLE(value)} />
+        </div>
+    );
+}
+
+function SettingRow({ label, desc, children }) {
+    return (
+        <div style={{
+            display: "flex", alignItems: "flex-start", justifyContent: "space-between",
+            gap: "1rem", padding: "0.9rem 0",
+            borderBottom: "1px solid #f3f4f6",
+        }}>
+            <div style={{ flex: 1 }}>
+                <p style={{ margin: 0, fontSize: "0.875rem", fontWeight: 600, color: "#111827" }}>{label}</p>
+                {desc && <p style={{ margin: "0.2rem 0 0", fontSize: "0.78rem", color: "#6b7280" }}>{desc}</p>}
+            </div>
+            <div style={{ flexShrink: 0, display: "flex", alignItems: "center" }}>
+                {children}
             </div>
         </div>
     );
 }
+
+function SettingsSection({ icon, title, children }) {
+    return (
+        <div style={{
+            background: "#ffffff", border: "1px solid #e5e7eb", borderRadius: "1rem",
+            padding: "1rem 1.25rem", marginBottom: "1rem",
+        }}>
+            <p style={{
+                margin: "0 0 0.1rem", fontSize: "0.72rem", fontWeight: 700,
+                color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.08em",
+            }}>
+                {icon} {title}
+            </p>
+            {children}
+        </div>
+    );
+}
+
+function SettingsTab() {
+    const [settings, setSettings]       = useState({
+        autoRoutingEnabled: false,
+        adminEmailNotifications: false,
+        slaOverdueDays: 3,
+        slaAutoEscalateDays: 7,
+    });
+    const [categories, setCategories]   = useState([]);
+    const [newCat, setNewCat]           = useState("");
+    const [saving, setSaving]           = useState(false);
+    const [catSaving, setCatSaving]     = useState(false);
+    const [loading, setLoading]         = useState(true);
+    const [toast, setToast]             = useState(null);
+    const [dirty, setDirty]             = useState(false);
+
+    const CATEGORY_META = {
+        TRANSPORT:   { icon: "🚌", desc: "Potholes, road damage, traffic lights" },
+        WATER:       { icon: "💧", desc: "Leaks, supply issues, burst pipes" },
+        ELECTRICITY: { icon: "⚡", desc: "Outages, faulty street lights" },
+        WASTE:       { icon: "♻️", desc: "Litter, illegal dumping, bin collection" },
+    };
+
+    const showToast = (msg, type = "success") => {
+        setToast({ msg, type });
+        setTimeout(() => setToast(null), 3500);
+    };
+
+    const fetchSettings = useCallback(async () => {
+        setLoading(true);
+        try {
+            const [sRes, cRes] = await Promise.all([
+                api.get("/admin/settings"),
+                api.get("/admin/settings/categories"),
+            ]);
+            setSettings(sRes.data);
+            setCategories(cRes.data);
+        } catch {
+            // If endpoints don't exist yet, use defaults silently
+        }
+        setLoading(false);
+        setDirty(false);
+    }, []);
+
+    useEffect(() => { fetchSettings(); }, [fetchSettings]);
+
+    const updateField = (key, value) => {
+        setSettings(s => ({ ...s, [key]: value }));
+        setDirty(true);
+    };
+
+    const saveSettings = async () => {
+        setSaving(true);
+        try {
+            await api.put("/admin/settings", settings);
+            showToast("Settings saved successfully");
+            setDirty(false);
+        } catch {
+            showToast("Failed to save settings", "error");
+        }
+        setSaving(false);
+    };
+
+    const addCategory = async () => {
+        const cat = newCat.trim().toUpperCase();
+        if (!cat || categories.includes(cat)) return;
+        setCatSaving(true);
+        try {
+            await api.post("/admin/settings/categories", { category: cat });
+            setCategories(prev => [...prev, cat]);
+            setNewCat("");
+            showToast(`Category "${cat}" added`);
+        } catch {
+            showToast("Failed to add category", "error");
+        }
+        setCatSaving(false);
+    };
+
+    const removeCategory = async (cat) => {
+        if (!window.confirm(`Remove category "${cat}"? This won't delete existing complaints.`)) return;
+        try {
+            await api.delete(`/admin/settings/categories/${cat}`);
+            setCategories(prev => prev.filter(c => c !== cat));
+            showToast(`Category "${cat}" removed`);
+        } catch {
+            showToast("Failed to remove category", "error");
+        }
+    };
+
+    const NumInput = ({ value, onChange, min = 1, max = 30 }) => (
+        <input
+            type="number" min={min} max={max} value={value}
+            onChange={e => onChange(Number(e.target.value))}
+            style={{
+                width: 64, padding: "0.35rem 0.5rem", border: "1px solid #d1d5db",
+                borderRadius: "0.5rem", fontSize: "0.875rem", textAlign: "center",
+                color: "#111827", background: "#fff", outline: "none",
+            }}
+            onFocus={e => e.target.style.borderColor = "#3b82f6"}
+            onBlur={e => e.target.style.borderColor = "#d1d5db"}
+        />
+    );
+
+    if (loading) {
+        return (
+            <div className="tab-content">
+                <div className="tab-loading">
+                    <div style={{ width: 28, height: 28, borderRadius: "50%",
+                        border: "2px solid #e5e7eb", borderTopColor: "#3b82f6",
+                        animation: "spin 0.7s linear infinite", margin: "0 auto 0.75rem" }} />
+                    Loading settings…
+                </div>
+                <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+            </div>
+        );
+    }
+
+    return (
+        <div className="tab-content">
+            {toast && <div className={`toast toast-${toast.type}`}>{toast.msg}</div>}
+
+            {/* ── Save bar ── */}
+            {dirty && (
+                <div style={{
+                    position: "sticky", top: 0, zIndex: 100,
+                    background: "#fffbeb", border: "1px solid #fde68a",
+                    borderRadius: "0.75rem", padding: "0.6rem 1rem",
+                    display: "flex", alignItems: "center", justifyContent: "space-between",
+                    marginBottom: "1rem", boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+                }}>
+                    <span style={{ fontSize: "0.82rem", fontWeight: 600, color: "#92400e" }}>
+                        ⚠ You have unsaved changes
+                    </span>
+                    <div style={{ display: "flex", gap: "0.5rem" }}>
+                        <button className="btn-outline" onClick={fetchSettings}>Discard</button>
+                        <button className="btn-primary" onClick={saveSettings} disabled={saving}>
+                            {saving ? "Saving…" : "Save Settings"}
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* ── Automation ── */}
+            <SettingsSection icon="🤖" title="Automation">
+                <SettingRow
+                    label="Auto-routing"
+                    desc="Automatically assign new complaints to the least-loaded staff member in the relevant department."
+                >
+                    <Toggle value={settings.autoRoutingEnabled} onChange={v => updateField("autoRoutingEnabled", v)} />
+                </SettingRow>
+                <SettingRow
+                    label="Admin email notifications"
+                    desc="Send email alerts to admins when critical complaints are submitted or overdue."
+                >
+                    <Toggle value={settings.adminEmailNotifications} onChange={v => updateField("adminEmailNotifications", v)} />
+                </SettingRow>
+            </SettingsSection>
+
+            {/* ── SLA Thresholds ── */}
+            <SettingsSection icon="⏱" title="SLA Thresholds">
+                <SettingRow
+                    label="Overdue trigger (days)"
+                    desc="Mark a complaint as overdue after this many days unresolved."
+                >
+                    <NumInput value={settings.slaOverdueDays} onChange={v => updateField("slaOverdueDays", v)} />
+                </SettingRow>
+                <SettingRow
+                    label="Auto-escalate after (days)"
+                    desc="Automatically escalate priority to CRITICAL after this many days."
+                >
+                    <NumInput value={settings.slaAutoEscalateDays} onChange={v => updateField("slaAutoEscalateDays", v)} />
+                </SettingRow>
+                <div style={{ paddingTop: "0.5rem" }}>
+                    <p style={{ margin: 0, fontSize: "0.75rem", color: "#9ca3af" }}>
+                        Dashboard refreshes every 30 seconds (hardcoded). JWT tokens expire after 24 hours.
+                    </p>
+                </div>
+            </SettingsSection>
+
+            {/* ── Complaint Categories ── */}
+            <SettingsSection icon="📂" title="Complaint Categories">
+                <div style={{ marginTop: "0.5rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                    {categories.map(cat => (
+                        <div key={cat} style={{
+                            display: "flex", alignItems: "center", gap: "0.6rem",
+                            padding: "0.55rem 0.75rem",
+                            background: "#f9fafb", border: "1px solid #e5e7eb",
+                            borderRadius: "0.6rem",
+                        }}>
+                            <span style={{ fontSize: "1rem" }}>{CATEGORY_META[cat]?.icon || "📁"}</span>
+                            <div style={{ flex: 1 }}>
+                                <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "#111827" }}>{cat}</span>
+                                {CATEGORY_META[cat]?.desc && (
+                                    <span style={{ marginLeft: "0.5rem", fontSize: "0.75rem", color: "#9ca3af" }}>
+                                        — {CATEGORY_META[cat].desc}
+                                    </span>
+                                )}
+                            </div>
+                            {!["TRANSPORT","WATER","ELECTRICITY","WASTE"].includes(cat) && (
+                                <button
+                                    onClick={() => removeCategory(cat)}
+                                    style={{
+                                        background: "none", border: "none", cursor: "pointer",
+                                        color: "#ef4444", fontSize: "0.8rem", padding: "0.1rem 0.3rem",
+                                        borderRadius: "0.35rem",
+                                    }}
+                                    title="Remove category"
+                                >
+                                    ✕
+                                </button>
+                            )}
+                        </div>
+                    ))}
+
+                    {/* Add new category */}
+                    <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem" }}>
+                        <input
+                            type="text"
+                            placeholder="New category name (e.g. PARKS)"
+                            value={newCat}
+                            onChange={e => setNewCat(e.target.value.toUpperCase())}
+                            onKeyDown={e => e.key === "Enter" && addCategory()}
+                            style={{
+                                flex: 1, padding: "0.55rem 0.75rem",
+                                border: "1px solid #d1d5db", borderRadius: "0.6rem",
+                                fontSize: "0.82rem", color: "#111827", background: "#fff",
+                                outline: "none",
+                            }}
+                            onFocus={e => e.target.style.borderColor = "#3b82f6"}
+                            onBlur={e => e.target.style.borderColor = "#d1d5db"}
+                        />
+                        <button
+                            className="btn-primary"
+                            onClick={addCategory}
+                            disabled={catSaving || !newCat.trim()}
+                        >
+                            {catSaving ? "Adding…" : "+ Add"}
+                        </button>
+                    </div>
+                </div>
+            </SettingsSection>
+
+            {/* ── Priority rules (read-only reference) ── */}
+            <SettingsSection icon="⚡" title="Priority Rules (Reference)">
+                {[
+                    { p: "LOW",      color: "#22c55e", r: "Routine, non-urgent — no SLA" },
+                    { p: "MEDIUM",   color: "#f59e0b", r: "Response within 5 days" },
+                    { p: "HIGH",     color: "#f97316", r: "Response within 24 hours" },
+                    { p: "CRITICAL", color: "#ef4444", r: "Immediate escalation required" },
+                ].map(({ p, color, r }) => (
+                    <div key={p} style={{
+                        display: "flex", alignItems: "center", gap: "0.75rem",
+                        padding: "0.55rem 0", borderBottom: "1px solid #f3f4f6",
+                    }}>
+                        <span style={{
+                            padding: "0.15rem 0.6rem", borderRadius: 999,
+                            background: color + "22", color,
+                            border: `1px solid ${color}55`,
+                            fontSize: "0.7rem", fontWeight: 700,
+                            minWidth: 72, textAlign: "center",
+                        }}>{p}</span>
+                        <span style={{ fontSize: "0.82rem", color: "#4b5563" }}>{r}</span>
+                    </div>
+                ))}
+            </SettingsSection>
+
+            {/* ── Security (read-only info) ── */}
+            <SettingsSection icon="🔐" title="Security & Access">
+                {[
+                    "Admin credentials are configured in application.properties",
+                    "All API calls require a valid JWT Bearer token",
+                    "JWT tokens expire after 24 hours — users must re-login",
+                    "Passwords are stored as BCrypt hashes — never in plaintext",
+                ].map((item, i) => (
+                    <div key={i} style={{
+                        display: "flex", alignItems: "flex-start", gap: "0.5rem",
+                        padding: "0.45rem 0", borderBottom: i < 3 ? "1px solid #f3f4f6" : "none",
+                    }}>
+                        <span style={{ color: "#22c55e", fontSize: "0.8rem", marginTop: "0.05rem" }}>✓</span>
+                        <span style={{ fontSize: "0.82rem", color: "#4b5563" }}>{item}</span>
+                    </div>
+                ))}
+            </SettingsSection>
+
+            {/* ── Save button at bottom too ── */}
+            <div style={{ display: "flex", justifyContent: "flex-end", paddingTop: "0.5rem" }}>
+                <button className="btn-primary" onClick={saveSettings} disabled={saving || !dirty}>
+                    {saving ? "Saving…" : dirty ? "Save Settings" : "All Changes Saved ✓"}
+                </button>
+            </div>
+
+            <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        </div>
+    );
+}
+
+export { ReportsTab, SettingsTab };
 
 // ── MAIN EXPORT ────────────────────────────────────────────────
 export default function AdminDashboard() {
