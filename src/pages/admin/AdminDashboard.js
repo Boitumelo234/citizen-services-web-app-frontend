@@ -5,6 +5,15 @@ import { AlertTriangle, Building2, CheckCheck, Download, Eye, FileBarChart2, Fil
 import api from "../../api/api";
 import "../../styles/admin.css";
 
+const getComplaintImageUrl = (photoUrl) => {
+    if (!photoUrl) return null;
+    if (photoUrl.startsWith("http://") || photoUrl.startsWith("https://")) return photoUrl;
+    let filename = photoUrl;
+    if (photoUrl.includes("/")) filename = photoUrl.split("/").pop();
+    if (photoUrl.includes("\\")) filename = photoUrl.split("\\").pop();
+    return `http://localhost:8081/api/files/${filename}`;
+};
+
 const PRIORITY_COLORS = { LOW: "#22c55e", MEDIUM: "#f59e0b", HIGH: "#f97316", CRITICAL: "#ef4444" };
 const STATUS_COLORS   = { PENDING: "#ef4444", ASSIGNED: "#f97316", IN_PROGRESS: "#3b82f6", RESOLVED: "#22c55e", DECLINED: "#8b5cf6" };
 const TABS = ["Complaints", "Users", "Departments", "Reports", "Settings"];
@@ -432,7 +441,7 @@ function ComplaintsTab() {
                                 <td className="photo-cell">
                                     {c.photoUrl ? (
                                         <img
-                                            src={c.photoUrl}
+                                            src={getComplaintImageUrl(c.photoUrl)}
                                             alt="Complaint"
                                             className="complaint-thumbnail"
                                             onClick={() => setSelected(c)}
@@ -485,7 +494,7 @@ function ComplaintsTab() {
                             <div className="full photo-section">
                                 <label>Complaint Photo</label>
                                 <img
-                                    src={selected.photoUrl}
+                                    src={getComplaintImageUrl(selected.photoUrl)}
                                     alt="Complaint evidence"
                                     className="complaint-photo-full"
                                 />

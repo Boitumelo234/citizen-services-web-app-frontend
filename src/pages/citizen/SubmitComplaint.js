@@ -258,12 +258,13 @@ function SubmitComplaint() {
                                     <p>{selectedFile.name}</p>
                                     <small>{(selectedFile.size / 1048576).toFixed(2)} MB</small>
                                     {previewUrl ? (
-                                        <img
-                                            src={previewUrl}
-                                            alt="Preview"
-                                            className="max-h-48 mx-auto rounded-lg shadow-sm object-contain"
-                                            style={{ marginTop: "1rem" }}
-                                        />
+                                        <div className="submit-upload-preview">
+                                            <img
+                                                src={previewUrl}
+                                                alt="Preview"
+                                                className="submit-upload-preview-image"
+                                            />
+                                        </div>
                                     ) : null}
                                 </>
                             )}
