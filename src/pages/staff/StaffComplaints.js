@@ -14,6 +14,16 @@ const PRIORITY_COLORS = { CRITICAL:"#ef4444", HIGH:"#f97316", MEDIUM:"#f59e0b", 
 const STATUS_COLORS   = { PENDING:"#ef4444", ASSIGNED:"#f97316", IN_PROGRESS:"#3b82f6", RESOLVED:"#22c55e", DECLINED:"#8b5cf6" };
 const CATEGORY_ICONS  = { TRANSPORT:"🚌", WATER:"💧", ELECTRICITY:"⚡", WASTE:"♻️" };
 
+// ========== HELPER: getImageUrl (same logic as MyComplaints) ==========
+const getImageUrl = (photoUrl) => {
+    if (!photoUrl) return null;
+    if (photoUrl.startsWith('http://') || photoUrl.startsWith('https://')) return photoUrl;
+    let filename = photoUrl;
+    if (photoUrl.includes('/')) filename = photoUrl.split('/').pop();
+    if (photoUrl.includes('\\')) filename = photoUrl.split('\\').pop();
+    return `http://localhost:8080/api/files/${filename}`;  // adjust base URL if needed
+};
+
 function timeAgo(dateStr) {
     if (!dateStr) return "—";
     const diff = Date.now() - new Date(dateStr).getTime();
@@ -40,7 +50,7 @@ function Toast({ msg, type }) {
     return <div className={`staff-toast ${type}`}>{type === "success" ? "✓" : type === "error" ? "✕" : "ℹ"} {msg}</div>;
 }
 
-// ── COMPLAINT DETAIL MODAL ────────────────────────────────
+// ── COMPLAINT DETAIL MODAL (with image fix) ────────────────────────────────
 function ComplaintModal({ id, onClose, onUpdated }) {
     const [complaint, setComplaint] = useState(null);
     const [loading, setLoading]     = useState(true);
@@ -48,6 +58,7 @@ function ComplaintModal({ id, onClose, onUpdated }) {
     const [addingNote, setAddingNote] = useState(false);
     const [updating, setUpdating]   = useState(false);
     const [toast, setToast]         = useState(null);
+    const [imageError, setImageError] = useState(false);   // local image error state
 
     const showToast = (msg, type = "success") => {
         setToast({ msg, type });
@@ -93,7 +104,6 @@ function ComplaintModal({ id, onClose, onUpdated }) {
             await addNote(id, note.trim());
             showToast("Note added successfully");
             setNote("");
-            // Refresh complaint data to show new note
             const updated = await getComplaintById(id);
             setComplaint(updated);
         } catch {
@@ -159,10 +169,23 @@ function ComplaintModal({ id, onClose, onUpdated }) {
                                         {complaint.description || "No description provided."}
                                     </p>
                                 </div>
+
+                                {/* ── PHOTO EVIDENCE (FIXED) ── */}
                                 {complaint.photoUrl && (
                                     <div className="full">
                                         <span className="staff-detail-label">Photo Evidence</span>
-                                        <img src={complaint.photoUrl} alt="Complaint evidence" className="staff-photo-full" />
+                                        {!imageError ? (
+                                            <img
+                                                src={getImageUrl(complaint.photoUrl)}
+                                                alt="Complaint evidence"
+                                                className="staff-photo-full"
+                                                onError={() => setImageError(true)}
+                                            />
+                                        ) : (
+                                            <div className="staff-photo-error">
+                                                ⚠️ Image could not be loaded
+                                            </div>
+                                        )}
                                     </div>
                                 )}
                             </div>
@@ -260,13 +283,14 @@ function ComplaintModal({ id, onClose, onUpdated }) {
 // ── MAIN COMPLAINTS LIST ──────────────────────────────────
 export default function StaffComplaints() {
     const navigate = useNavigate();
-    const { id: urlId } = useParams(); // support /staff/complaints/:id deep link
+    const { id: urlId } = useParams();
 
     const [complaints, setComplaints] = useState([]);
     const [loading, setLoading]       = useState(true);
     const [filter, setFilter]         = useState({ status: "", priority: "", category: "" });
     const [selectedId, setSelectedId] = useState(urlId ? Number(urlId) : null);
     const [toast, setToast]           = useState(null);
+    const [imageErrors, setImageErrors] = useState({});   // track broken images in table
 
     const showToast = (msg, type = "success") => {
         setToast({ msg, type });
@@ -286,7 +310,6 @@ export default function StaffComplaints() {
 
     useEffect(() => { fetchComplaints(); }, [fetchComplaints]);
 
-    // Quick inline status update from table
     const quickStatus = async (e, id, status) => {
         e.stopPropagation();
         try {
@@ -314,7 +337,10 @@ export default function StaffComplaints() {
         URL.revokeObjectURL(url);
     };
 
-    // Group counts for mini summary chips
+    const handleImageError = (complaintId) => {
+        setImageErrors(prev => ({ ...prev, [complaintId]: true }));
+    };
+
     const counts = {
         total:      complaints.length,
         pending:    complaints.filter(c => c.status === "PENDING" || c.status === "ASSIGNED").length,
@@ -336,7 +362,7 @@ export default function StaffComplaints() {
 
                 <Toast msg={toast?.msg} type={toast?.type} />
 
-                {/* ── SUMMARY CHIPS ── */}
+                {/* Summary chips */}
                 <div style={{ display: "flex", gap: "0.65rem", flexWrap: "wrap", marginBottom: "1.25rem" }}>
                     {[
                         { label: "Total",       value: counts.total,      color: "#2563eb" },
@@ -358,7 +384,7 @@ export default function StaffComplaints() {
                     ))}
                 </div>
 
-                {/* ── FILTERS ── */}
+                {/* Filters */}
                 <div className="staff-toolbar">
                     <div className="staff-filters">
                         {[
@@ -382,7 +408,7 @@ export default function StaffComplaints() {
                     </div>
                 </div>
 
-                {/* ── TABLE ── */}
+                {/* Table */}
                 {loading ? (
                     <div className="staff-loading"><div className="staff-spinner" /><span>Loading complaints…</span></div>
                 ) : (
@@ -421,13 +447,24 @@ export default function StaffComplaints() {
                                     <td style={{ fontSize: "0.82rem" }}>{c.area || "—"}</td>
                                     <td><Badge value={c.priority} colorMap={PRIORITY_COLORS} /></td>
                                     <td><Badge value={c.status}   colorMap={STATUS_COLORS} /></td>
+
+                                    {/* ── PHOTO THUMBNAIL (FIXED) ── */}
                                     <td style={{ textAlign: "center" }}>
-                                        {c.photoUrl ? (
-                                            <img src={c.photoUrl} alt="evidence"
-                                                 className="staff-photo-thumb"
-                                                 onClick={e => { e.stopPropagation(); setSelectedId(c.id); }} />
-                                        ) : <span style={{ color: "#9ca3af" }}>—</span>}
+                                        {c.photoUrl && !imageErrors[c.id] ? (
+                                            <img
+                                                src={getImageUrl(c.photoUrl)}
+                                                alt="evidence"
+                                                className="staff-photo-thumb"
+                                                onClick={e => { e.stopPropagation(); setSelectedId(c.id); }}
+                                                onError={() => handleImageError(c.id)}
+                                            />
+                                        ) : (
+                                            <span style={{ color: "#9ca3af", fontSize: "0.75rem" }}>
+                                                {c.photoUrl ? "⚠️ Broken" : "—"}
+                                            </span>
+                                        )}
                                     </td>
+
                                     <td style={{ fontFamily: "monospace", fontSize: "0.78rem", color: "#6b7280" }}>
                                         {timeAgo(c.createdAt)}
                                     </td>
@@ -452,7 +489,7 @@ export default function StaffComplaints() {
                     </div>
                 )}
 
-                {/* ── DETAIL MODAL ── */}
+                {/* Detail Modal */}
                 {selectedId && (
                     <ComplaintModal
                         id={selectedId}

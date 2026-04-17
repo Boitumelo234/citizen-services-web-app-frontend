@@ -333,6 +333,22 @@ function ComplaintsTab() {
         }
     });
 
+    const [imageErrors, setImageErrors] = useState({});
+
+// Same logic as MyComplaints.jsx
+    const getImageUrl = (photoUrl) => {
+        if (!photoUrl) return null;
+        if (photoUrl.startsWith('http://') || photoUrl.startsWith('https://')) return photoUrl;
+        let filename = photoUrl;
+        if (photoUrl.includes('/')) filename = photoUrl.split('/').pop();
+        if (photoUrl.includes('\\')) filename = photoUrl.split('\\').pop();
+        return `http://localhost:8080/api/files/${filename}`;  // adjust base URL if needed
+    };
+
+    const handleImageError = (complaintId) => {
+        setImageErrors(prev => ({ ...prev, [complaintId]: true }));
+    };
+
     return (
         <div className="tab-content">
             {toast && <div className={`toast toast-${toast.type}`}>{toast.msg}</div>}
@@ -408,18 +424,28 @@ function ComplaintsTab() {
                                         "— Unassigned"}
                                 </td>
 
-                                {/* Complaint Photo Thumbnail */}
                                 <td className="photo-cell">
-                                    {c.photoUrl ? (
+                                    {c.photoUrl && !imageErrors[c.id] ? (
                                         <img
-                                            src={c.photoUrl}
+                                            src={getImageUrl(c.photoUrl)}
                                             alt="Complaint"
                                             className="complaint-thumbnail"
                                             onClick={() => setSelected(c)}
                                             title="Click to view full size"
+                                            onError={() => handleImageError(c.id)}
+                                            style={{
+                                                width: '48px',
+                                                height: '48px',
+                                                objectFit: 'cover',
+                                                borderRadius: '0.5rem',
+                                                cursor: 'pointer',
+                                                border: '1px solid #e5e7eb'
+                                            }}
                                         />
                                     ) : (
-                                        <span className="no-photo">—</span>
+                                        <span className="no-photo" style={{ fontSize: '0.75rem', color: '#9ca3af' }}>
+            {c.photoUrl ? '⚠️ Broken' : '—'}
+        </span>
                                     )}
                                 </td>
 
@@ -454,15 +480,30 @@ function ComplaintsTab() {
                         <div><label>Citizen Email</label><span>{selected.citizenEmail || selected.user?.email || "—"}</span></div>
                         <div><label>Department</label><span>{selected.departmentName || "—"}</span></div>
 
-                        {/* Complaint Photo - Full View */}
-                        {selected.photoUrl && (
+                        {selected.photoUrl && !imageErrors[selected.id] ? (
                             <div className="full photo-section">
                                 <label>Complaint Photo</label>
                                 <img
-                                    src={selected.photoUrl}
+                                    src={getImageUrl(selected.photoUrl)}
                                     alt="Complaint evidence"
                                     className="complaint-photo-full"
+                                    onError={() => handleImageError(selected.id)}
+                                    style={{
+                                        width: '100%',
+                                        maxHeight: '300px',
+                                        objectFit: 'contain',
+                                        borderRadius: '0.75rem',
+                                        border: '1px solid #e5e7eb',
+                                        marginTop: '0.5rem'
+                                    }}
                                 />
+                            </div>
+                        ) : (
+                            <div className="full photo-section">
+                                <label>Complaint Photo</label>
+                                <div className="no-photo" style={{ padding: '1rem', textAlign: 'center', background: '#f9fafb', borderRadius: '0.75rem', color: '#9ca3af' }}>
+                                    {selected.photoUrl ? '⚠️ Image could not be loaded' : 'No photo attached'}
+                                </div>
                             </div>
                         )}
 

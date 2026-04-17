@@ -51,7 +51,7 @@ export default function StaffLayout({ children }) {
     const handleLogout = () => {
         localStorage.removeItem("access_token");
         localStorage.removeItem("user");
-        navigate("/login");
+        navigate("/");
     };
 
     const activeKey = NAV_ITEMS.find(n =>
