@@ -1,4 +1,7 @@
+<<<<<<< HEAD
 // MyComplaints.jsx
+=======
+>>>>>>> 3b4c154 (feat: restyle my complaints page)
 import '../../styles/dashboard.css';
 import { Link } from 'react-router-dom';
 import { useState, useEffect, useCallback } from 'react';
@@ -23,7 +26,11 @@ function MyComplaints() {
             return;
         }
         try {
+<<<<<<< HEAD
             const res = await fetch('http://localhost:8080/api/complaints', {
+=======
+            const res = await fetch('http://localhost:8081/api/complaints', {
+>>>>>>> 3b4c154 (feat: restyle my complaints page)
                 headers: { Authorization: `Bearer ${token}` },
             });
             if (!res.ok) throw new Error('Failed to load complaints');
@@ -39,7 +46,11 @@ function MyComplaints() {
     useEffect(() => { fetchComplaints(); }, [fetchComplaints]);
 
     const formatDate = (dateStr) => {
+<<<<<<< HEAD
         if (!dateStr) return '—';
+=======
+        if (!dateStr) return '-';
+>>>>>>> 3b4c154 (feat: restyle my complaints page)
         return new Date(dateStr).toLocaleDateString('en-ZA', {
             year: 'numeric', month: 'short', day: 'numeric',
             hour: '2-digit', minute: '2-digit',
@@ -52,11 +63,19 @@ function MyComplaints() {
         let filename = photoUrl;
         if (photoUrl.includes('/')) filename = photoUrl.split('/').pop();
         if (photoUrl.includes('\\')) filename = photoUrl.split('\\').pop();
+<<<<<<< HEAD
         return `http://localhost:8080/api/files/${filename}`;
     };
 
     const handleImageError = (complaintId) => {
         setImageErrors(prev => ({ ...prev, [complaintId]: true }));
+=======
+        return `http://localhost:8081/api/files/${filename}`;
+    };
+
+    const handleImageError = (complaintId) => {
+        setImageErrors((prev) => ({ ...prev, [complaintId]: true }));
+>>>>>>> 3b4c154 (feat: restyle my complaints page)
     };
 
     const openDetails = (comp) => {
@@ -77,6 +96,7 @@ function MyComplaints() {
         setSelectedComplaint(null);
     };
 
+<<<<<<< HEAD
     // Status config
     const statusConfig = {
         resolved:     { bg: '#ecfdf5', border: '#a7f3d0', text: '#047857', dot: '#10b981' },
@@ -135,6 +155,53 @@ function MyComplaints() {
             {/* ── Complaint cards ── */}
             {!loading && !error && complaints.length > 0 && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+=======
+    const statusConfig = {
+        resolved: { bg: '#ecfdf5', border: '#a7f3d0', text: '#047857', dot: '#10b981' },
+        'in progress': { bg: '#fffbeb', border: '#fde68a', text: '#b45309', dot: '#f59e0b' },
+        pending: { bg: '#eff6ff', border: '#bfdbfe', text: '#1d4ed8', dot: '#3b82f6' },
+    };
+
+    return (
+        <div className="citizen-v2-page">
+            <section className="citizen-v2-header enhanced">
+                <div>
+                    <h1>My Complaints</h1>
+                    <p>Track the status of all your reported issues</p>
+                </div>
+                <Link className="citizen-v2-primary-btn" to="/citizen/submit">
+                    New Complaint
+                </Link>
+            </section>
+
+            {loading && (
+                <article className="citizen-v2-card my-complaints-state">
+                    <div style={{ width: 36, height: 36, borderRadius: '50%', border: '3px solid #e2e8f0', borderTopColor: '#2563eb', animation: 'spin 0.7s linear infinite' }} />
+                    <p>Loading your complaints...</p>
+                    <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+                </article>
+            )}
+
+            {error && !loading && (
+                <article className="citizen-v2-card my-complaints-alert my-complaints-alert-error">
+                    {error}
+                </article>
+            )}
+
+            {!loading && !error && complaints.length === 0 && (
+                <article className="citizen-v2-card my-complaints-state">
+                    <span className="my-complaints-state-icon">Inbox</span>
+                    <p className="my-complaints-state-title">No complaints yet</p>
+                    <p className="my-complaints-state-copy">You haven't submitted any complaints yet.</p>
+                    <Link to="/citizen/submit" className="citizen-v2-primary-btn">
+                        Submit your first complaint
+                    </Link>
+                </article>
+            )}
+
+            {!loading && !error && complaints.length > 0 && (
+                <section className="my-complaints-stack">
+>>>>>>> 3b4c154 (feat: restyle my complaints page)
                     {complaints.map((comp) => {
                         const imageUrl = getImageUrl(comp.photoUrl);
                         const hasImageError = imageErrors[comp.id];
@@ -142,6 +209,7 @@ function MyComplaints() {
                         const sc = statusConfig[statusKey] || statusConfig.pending;
 
                         return (
+<<<<<<< HEAD
                             <div key={comp.id} className="card" style={{ overflow: 'hidden' }}>
                                 <div style={{ padding: '1.35rem 1.4rem' }}>
                                     {/* Card header */}
@@ -230,15 +298,83 @@ function MyComplaints() {
                                         >
                                             ✏️ Add Update
                                         </button>
+=======
+                            <article key={comp.id} className="citizen-v2-card my-complaint-card">
+                                <div className="my-complaint-top">
+                                    <div>
+                                        <p className="my-complaint-ref">{comp.referenceNumber}</p>
+                                        <h3 className="my-complaint-title">{comp.category}</h3>
+                                        <p className="my-complaint-meta">Submitted {formatDate(comp.createdAt)}</p>
+>>>>>>> 3b4c154 (feat: restyle my complaints page)
                                     </div>
+
+                                    <span
+                                        className="my-complaint-status"
+                                        style={{
+                                            background: sc.bg,
+                                            border: `1px solid ${sc.border}`,
+                                            color: sc.text,
+                                        }}
+                                    >
+                                        <span className="my-complaint-status-dot" style={{ background: sc.dot }} />
+                                        {comp.status || 'Pending'}
+                                    </span>
                                 </div>
-                            </div>
+
+                                <p className="my-complaint-description">{comp.description}</p>
+
+                                <div className="my-complaint-grid">
+                                    {comp.location && (
+                                        <div>
+                                            <span className="my-complaint-label">Location</span>
+                                            <p className="my-complaint-value">{comp.location}</p>
+                                        </div>
+                                    )}
+
+                                    {comp.photoUrl && !hasImageError && (
+                                        <div>
+                                            <span className="my-complaint-label">Attachment</span>
+                                            <div className="my-complaint-media">
+                                                <img
+                                                    src={imageUrl}
+                                                    alt="Complaint attachment"
+                                                    className="my-complaint-media-image"
+                                                    onError={() => handleImageError(comp.id)}
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="my-complaint-actions">
+                                    <button
+                                        type="button"
+                                        onClick={() => openDetails(comp)}
+                                        className="my-complaint-secondary-btn"
+                                    >
+                                        View Details
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => openUpdate(comp)}
+                                        className="citizen-v2-primary-btn"
+                                    >
+                                        Add Update
+                                    </button>
+                                </div>
+                            </article>
                         );
                     })}
+<<<<<<< HEAD
                 </div>
             )}
 
             {/* ── Modals ── */}
+=======
+                </section>
+            )}
+
+>>>>>>> 3b4c154 (feat: restyle my complaints page)
             {showDetails && selectedComplaint && (
                 <ComplaintDetailsModal
                     complaint={selectedComplaint}
@@ -259,4 +395,8 @@ function MyComplaints() {
     );
 }
 
+<<<<<<< HEAD
 export default MyComplaints;
+=======
+export default MyComplaints;
+>>>>>>> 3b4c154 (feat: restyle my complaints page)

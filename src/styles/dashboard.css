@@ -2,8 +2,8 @@
 @import url("https://api.fontshare.com/v2/css?f[]=satoshi@900,700,500,400&display=swap");
 
 /* dashboard.css - Shared professional styles for Rustenburg Citizen Services Platform */
-/* Light theme with blue accents — suitable for citizen & admin dashboards */
-/* Sidebar dark for contrast — municipal/govt feel */
+/* Light theme with blue accents � suitable for citizen & admin dashboards */
+/* Sidebar dark for contrast � municipal/govt feel */
 
 :root {
     --primary: #2563eb;          /* blue-600 main action color */
@@ -92,13 +92,13 @@ body {
     background: rgba(255,255,255,0.1);
 }
 
-/* Typography ──────────────────────────────────────────────── */
+/* Typography ------------------------------------------------ */
 .dashboard-title {
     font-size: 2.25rem;
     font-weight: 700;
     color: #1f2937;              /* gray-800 */
     margin-bottom: 0.25rem;
-    padding-left: 0.5rem;        /* ← prevents touching left edge */
+    padding-left: 0.5rem;        /* ? prevents touching left edge */
 }
 
 .subtitle {
@@ -112,17 +112,17 @@ body {
     font-size: 1.5rem;
     font-weight: 600;
     margin-bottom: 1.25rem;
-    padding-left: 0.75rem;       /* ← main fix: space from left border */
+    padding-left: 0.75rem;       /* ? main fix: space from left border */
 }
 
 .card-title {
     font-size: 1.25rem;
     font-weight: 600;
     margin-bottom: 1rem;
-    padding-left: 0.75rem;       /* ← consistent with section-title */
+    padding-left: 0.75rem;       /* ? consistent with section-title */
 }
 
-/* Universal card ──────────────────────────────────────────────── */
+/* Universal card ------------------------------------------------ */
 .card {
     background-color: var(--card-bg);
     border: 1px solid var(--border);
@@ -143,7 +143,7 @@ body {
 .card > .p-6,
 .card > .space-y-4,
 .card > .flex {
-    padding: 1.5rem 1.75rem;     /* ← increased horizontal padding */
+    padding: 1.5rem 1.75rem;     /* ? increased horizontal padding */
 }
 
 /* Make sure first heading doesn't collapse margin */
@@ -154,7 +154,7 @@ body {
 
 /* Stat / KPI cards */
 .stat-card {
-    padding: 1.75rem 1.25rem;    /* ← a bit more generous */
+    padding: 1.75rem 1.25rem;    /* ? a bit more generous */
     text-align: center;
 }
 
@@ -246,7 +246,7 @@ body {
     border-color: #bfdbfe;
 }
 
-/* Table styles (admin queue) ───────────────────────────────── */
+/* Table styles (admin queue) --------------------------------- */
 .table-container {
     overflow-x: auto;
     margin: 0 -1.75rem;          /* compensate for card padding */
@@ -261,7 +261,7 @@ table {
 
 thead th {
     text-align: left;
-    padding: 0.85rem 1.25rem;    /* ← increased padding */
+    padding: 0.85rem 1.25rem;    /* ? increased padding */
     font-size: 0.875rem;
     font-weight: 600;
     color: var(--text-light);
@@ -280,7 +280,7 @@ tbody tr:hover {
 }
 
 td {
-    padding: 1.1rem 1.25rem;     /* ← more horizontal breathing room */
+    padding: 1.1rem 1.25rem;     /* ? more horizontal breathing room */
     vertical-align: middle;
 }
 
@@ -316,7 +316,7 @@ td {
     margin-top: 1.5rem;
 }
 
-/* Safety net – prevent text hugging left edge in any direct child */
+/* Safety net � prevent text hugging left edge in any direct child */
 .card > p,
 .card > div > p,
 .card > div > span:not(.status-badge) {
@@ -1243,6 +1243,16 @@ td {
         grid-template-columns: 1fr;
     }
 
+    .my-complaint-top,
+    .my-complaint-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .my-complaint-grid {
+        grid-template-columns: 1fr;
+    }
+
     .citizen-mobile-nav {
         display: flex;
     }
@@ -1258,3 +1268,182 @@ td {
     }
 }
 
+<<<<<<< HEAD
+=======
+.my-complaints-stack {
+    margin-top: 1.2rem;
+    display: grid;
+    gap: 1rem;
+}
+
+.my-complaints-state {
+    margin-top: 1.2rem;
+    min-height: 260px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.8rem;
+    text-align: center;
+    color: #64748b;
+}
+
+.my-complaints-state-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 72px;
+    height: 72px;
+    padding: 0 1rem;
+    border-radius: 999px;
+    background: #eff6ff;
+    color: #2563eb;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+
+.my-complaints-state-title {
+    margin: 0;
+    color: #0f172a;
+    font-size: 1.1rem;
+    font-weight: 700;
+}
+
+.my-complaints-state-copy {
+    margin: 0;
+    color: #64748b;
+    font-size: 0.94rem;
+}
+
+.my-complaints-alert {
+    margin-top: 1.2rem;
+    font-size: 0.92rem;
+    font-weight: 600;
+}
+
+.my-complaints-alert-error {
+    border-color: #fecaca;
+    background: #fff5f5;
+    color: #dc2626;
+}
+
+.my-complaint-card {
+    display: grid;
+    gap: 1rem;
+}
+
+.my-complaint-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+}
+
+.my-complaint-ref {
+    margin: 0 0 0.3rem;
+    color: #94a3b8;
+    font-size: 0.74rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.my-complaint-title {
+    margin: 0;
+    color: #0f172a;
+    font-size: 1.05rem;
+    font-weight: 700;
+}
+
+.my-complaint-meta {
+    margin: 0.35rem 0 0;
+    color: #64748b;
+    font-size: 0.84rem;
+}
+
+.my-complaint-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.38rem 0.85rem;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.my-complaint-status-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 999px;
+}
+
+.my-complaint-description {
+    margin: 0;
+    color: #475569;
+    font-size: 0.93rem;
+    line-height: 1.7;
+}
+
+.my-complaint-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+.my-complaint-label {
+    display: block;
+    margin-bottom: 0.35rem;
+    color: #475569;
+    font-weight: 700;
+    font-size: 0.88rem;
+}
+
+.my-complaint-value {
+    margin: 0;
+    border: 1px solid #cbd5e1;
+    border-radius: 0.75rem;
+    background: #f8fafc;
+    padding: 0.82rem 0.9rem;
+    color: #334155;
+    font-size: 0.92rem;
+}
+
+.my-complaint-media {
+    border: 1px solid #cbd5e1;
+    border-radius: 1rem;
+    background: #f8fafc;
+    overflow: hidden;
+    min-height: 190px;
+}
+
+.my-complaint-media-image {
+    display: block;
+    width: 100%;
+    height: 100%;
+    max-height: 240px;
+    object-fit: cover;
+}
+
+.my-complaint-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.8rem;
+    padding-top: 0.25rem;
+}
+
+.my-complaint-secondary-btn {
+    border: 1px solid #cbd5e1;
+    background: #ffffff;
+    color: #334155;
+    border-radius: 999px;
+    padding: 0.72rem 1.2rem;
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.my-complaint-secondary-btn:hover {
+    background: #f8fafc;
+}
+>>>>>>> 3b4c154 (feat: restyle my complaints page)
