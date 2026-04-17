@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import "../../styles/dashboard.css";
 import { getDashboard } from "../../services/citizenService";
+import { askGroqCitizenAssist } from "../../services/groqService";
 
 const iconMap = {
     "Infrastructure & Roads": { icon: AlertTriangle, iconClass: "cat-orange" },
@@ -60,6 +61,11 @@ function CitizenDashboard() {
         recentComplaints: [],
     });
     const [error, setError] = useState("");
+    const [aiLoading, setAiLoading] = useState(false);
+    const [aiModalOpen, setAiModalOpen] = useState(false);
+    const [aiPrompt, setAiPrompt] = useState("");
+    const [aiReply, setAiReply] = useState("");
+    const [aiError, setAiError] = useState("");
 
     useEffect(() => {
         const loadDashboard = async () => {
@@ -82,6 +88,40 @@ function CitizenDashboard() {
     }, []);
 
     const getSticker = (category) => stickerConfig[category] || stickerConfig.Other;
+
+    const handleAiAssist = () => {
+        setAiModalOpen(true);
+        setAiError("");
+        setAiReply("");
+    };
+
+    const handleAiAssistSubmit = async () => {
+        if (!aiPrompt.trim()) {
+            setAiError("Enter a question for AI Assist.");
+            return;
+        }
+
+        try {
+            setAiLoading(true);
+            setAiError("");
+            const reply = await askGroqCitizenAssist(aiPrompt, dashboard);
+            setAiReply(reply);
+        } catch (err) {
+            setAiError(err.message || "AI Assist failed.");
+        } finally {
+            setAiLoading(false);
+        }
+    };
+
+    const closeAiModal = () => {
+        if (aiLoading) {
+            return;
+        }
+        setAiModalOpen(false);
+        setAiPrompt("");
+        setAiReply("");
+        setAiError("");
+    };
 
     const complaintCategories = dashboard.categories.map((category) => ({
         ...category,
@@ -147,7 +187,9 @@ function CitizenDashboard() {
                             <Link to="/citizen/my-complaints"><Search size={20} /> <span>Track</span></Link>
                             <Link to="/citizen/submit"><Plus size={20} /> <span>New Fault</span></Link>
                             <Link to="/citizen/map"><Navigation size={20} /> <span>Map</span></Link>
-                            <button type="button"><Sparkles size={20} /> <span>AI Assist</span></button>
+                            <button type="button" onClick={handleAiAssist} disabled={aiLoading}>
+                                <Sparkles size={20} /> <span>{aiLoading ? "Thinking..." : "AI Assist"}</span>
+                            </button>
                         </div>
                     </article>
 
@@ -227,6 +269,45 @@ function CitizenDashboard() {
                 <button type="button"><Navigation size={18} /><span>Map</span></button>
                 <button type="button"><Bell size={18} /><span>Alerts</span></button>
             </div>
+
+            {aiModalOpen ? (
+                <div className="citizen-ai-modal-backdrop" onClick={closeAiModal}>
+                    <div className="citizen-v2-card citizen-ai-modal" onClick={(event) => event.stopPropagation()}>
+                        <div className="citizen-v2-card-head">
+                            <h3>AI Assist</h3>
+                            <button type="button" onClick={closeAiModal} disabled={aiLoading}>Close</button>
+                        </div>
+                        <p className="subtitle citizen-ai-modal-subtitle">
+                            Ask about your dashboard, complaints, categories, or next steps.
+                        </p>
+                        <label className="citizen-ai-modal-field">
+                            <span>Your question</span>
+                            <textarea
+                                value={aiPrompt}
+                                onChange={(event) => setAiPrompt(event.target.value)}
+                                placeholder="Ask AI Assist anything about your citizen dashboard"
+                                rows={5}
+                                disabled={aiLoading}
+                            />
+                        </label>
+                        {aiError ? <p className="citizen-ai-modal-message citizen-ai-modal-error">{aiError}</p> : null}
+                        {aiReply ? (
+                            <div className="citizen-ai-modal-reply">
+                                <strong>Reply</strong>
+                                <p>{aiReply}</p>
+                            </div>
+                        ) : null}
+                        <div className="citizen-ai-modal-actions">
+                            <button type="button" className="my-complaint-secondary-btn" onClick={closeAiModal} disabled={aiLoading}>
+                                Cancel
+                            </button>
+                            <button type="button" className="citizen-v2-primary-btn" onClick={handleAiAssistSubmit} disabled={aiLoading}>
+                                <Sparkles size={16} /> {aiLoading ? "Thinking..." : "Ask AI Assist"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            ) : null}
         </div>
     );
 }

@@ -11,6 +11,9 @@ function SubmitComplaint() {
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState(null);
     const [error, setError] = useState(null);
+    const [locationSuggestions, setLocationSuggestions] = useState([]);
+    const [locationSearching, setLocationSearching] = useState(false);
+    const [locationFocused, setLocationFocused] = useState(false);
 
     useEffect(() => {
         return () => {
@@ -19,6 +22,56 @@ function SubmitComplaint() {
             }
         };
     }, [previewUrl]);
+
+    useEffect(() => {
+        if (!locationFocused) {
+            return undefined;
+        }
+
+        const controller = new AbortController();
+        const trimmedLocation = location.trim();
+        const query = trimmedLocation ? `${trimmedLocation}, Rustenburg` : "Rustenburg";
+
+        const timeoutId = setTimeout(async () => {
+            try {
+                setLocationSearching(true);
+
+                const params = new URLSearchParams({
+                    format: "jsonv2",
+                    limit: "6",
+                    countrycodes: "za",
+                    bounded: "1",
+                    viewbox: "26.25,-25.55,27.45,-26.15",
+                    q: query,
+                });
+
+                const response = await fetch(`https://nominatim.openstreetmap.org/search?${params.toString()}`, {
+                    signal: controller.signal,
+                    headers: {
+                        Accept: "application/json",
+                    },
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Location search failed with status ${response.status}`);
+                }
+
+                const data = await response.json();
+                setLocationSuggestions(Array.isArray(data) ? data : []);
+            } catch (searchError) {
+                if (searchError.name !== "AbortError") {
+                    setLocationSuggestions([]);
+                }
+            } finally {
+                setLocationSearching(false);
+            }
+        }, 250);
+
+        return () => {
+            clearTimeout(timeoutId);
+            controller.abort();
+        };
+    }, [location, locationFocused]);
 
     const handleFileChange = (event) => {
         const file = event.target.files?.[0];
@@ -107,6 +160,12 @@ function SubmitComplaint() {
         }
     };
 
+    const handleSelectLocation = (suggestion) => {
+        setLocation(suggestion.display_name);
+        setLocationSuggestions([]);
+        setLocationFocused(false);
+    };
+
     return (
         <div className="citizen-v2-page">
             <section className="citizen-v2-header enhanced">
@@ -135,15 +194,44 @@ function SubmitComplaint() {
                             </select>
                         </label>
 
-                        <label>
+                        <label className="submit-location-field">
                             <span>Location</span>
                             <input
                                 type="text"
-                                placeholder="Enter address or use current location"
+                                placeholder="Search for any location in Rustenburg"
                                 value={location}
                                 onChange={(event) => setLocation(event.target.value)}
+                                onFocus={() => setLocationFocused(true)}
+                                onBlur={() => {
+                                    window.setTimeout(() => setLocationFocused(false), 150);
+                                }}
+                                autoComplete="off"
                                 required
                             />
+                            {locationFocused ? (
+                                <div className="submit-location-dropdown">
+                                    {locationSearching ? (
+                                        <p className="submit-location-state">Searching Rustenburg...</p>
+                                    ) : null}
+                                    {!locationSearching && locationSuggestions.length === 0 ? (
+                                        <p className="submit-location-state">No Rustenburg locations found.</p>
+                                    ) : null}
+                                    {!locationSearching && locationSuggestions.length > 0 ? (
+                                        <div className="submit-location-options">
+                                            {locationSuggestions.map((suggestion) => (
+                                                <button
+                                                    key={`${suggestion.place_id}-${suggestion.lat}-${suggestion.lon}`}
+                                                    type="button"
+                                                    className="submit-location-option"
+                                                    onMouseDown={() => handleSelectLocation(suggestion)}
+                                                >
+                                                    {suggestion.display_name}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    ) : null}
+                                </div>
+                            ) : null}
                         </label>
                     </div>
 

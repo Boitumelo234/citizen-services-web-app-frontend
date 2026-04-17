@@ -74,31 +74,34 @@ function buildTrendMonthsFromComplaints(complaints) {
     });
 
     complaints.forEach((complaint) => {
-        if (!complaint?.createdAt) return;
+        if (!complaint?.createdAt) {
+            return;
+        }
 
         const createdDate = new Date(complaint.createdAt);
-        if (Number.isNaN(createdDate.getTime())) return;
+        if (Number.isNaN(createdDate.getTime())) {
+            return;
+        }
 
         const monthEntry = monthFrames.find((frame) =>
             frame.month === createdDate.getMonth() && frame.year === createdDate.getFullYear()
         );
 
-        if (!monthEntry) return;
+        if (!monthEntry) {
+            return;
+        }
 
         const day = createdDate.getDate();
         if (!monthEntry.activityDays[day]) {
-            monthEntry.activityDays[day] = { total: 0, unresolved: 0 };
+            monthEntry.activityDays[day] = { total: 0 };
         }
 
         monthEntry.activityDays[day].total += 1;
-        if (String(complaint.status || "").toLowerCase() !== "resolved") {
-            monthEntry.activityDays[day].unresolved += 1;
-        }
     });
 
     return monthFrames.map((frame) => ({
         ...frame,
-        count: Object.keys(frame.activityDays).length,
+        count: Object.values(frame.activityDays).reduce((sum, item) => sum + item.total, 0),
     }));
 }
 
@@ -231,8 +234,8 @@ function CitizenOverview() {
                                                         <span key={`${item.label}-empty-${idx}`} className="overview-v2-mini-day empty" />
                                                     ) : (
                                                         <span key={`${item.label}-${day}`} className="overview-v2-mini-day-wrap">
-                                                            {activityDays[day]?.unresolved > 0 ? (
-                                                                <span className="overview-v2-mini-day-badge">{activityDays[day].unresolved}</span>
+                                                            {activityDays[day]?.total > 0 ? (
+                                                                <span className="overview-v2-mini-day-badge">{activityDays[day].total}</span>
                                                             ) : null}
                                                             <span
                                                                 className={`overview-v2-mini-day ${activityDays[day] ? "active" : ""}`}
@@ -249,7 +252,7 @@ function CitizenOverview() {
                             </div>
                             <div className="overview-v2-trend-legend">
                                 <span><i className="activity" /> Activity day</span>
-                                <span><i className="unresolved" /> Unresolved</span>
+                                <span><i className="unresolved" /> Activity count badge</span>
                                 <span><i className="none" /> No activity</span>
                             </div>
                         </div>
