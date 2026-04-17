@@ -829,3 +829,20 @@
     .admin-layout { display: block; }
     .admin-overview, .admin-dashboard { margin: 0; padding: 1rem; }
 }
+
+.complaint-thumbnail {
+    width: 48px;
+    height: 48px;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    cursor: pointer;
+    transition: transform 0.1s ease;
+}
+.complaint-thumbnail:hover {
+    transform: scale(1.05);
+}
+.photo-cell {
+    text-align: center;
+    vertical-align: middle;
+}
