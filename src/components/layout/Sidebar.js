@@ -50,6 +50,35 @@ function Sidebar({ role }) {
         );
     }
 
+    if (role === "admin") {
+        const navItems = [
+            { label: "Dashboard", to: "/admin" },
+            { label: "Overview", to: "/admin/overview" },
+        ];
+
+        return (
+            <aside className="sidebar citizen-v2-sidebar">
+                <div className="citizen-v2-brand">Admin</div>
+                <nav className="citizen-v2-nav">
+                    {navItems.map((item) => (
+                        <NavLink
+                            key={item.to}
+                            to={item.to}
+                            className={({ isActive }) => `citizen-v2-nav-item ${isActive ? "active" : ""}`}
+                        >
+                            {item.label}
+                        </NavLink>
+                    ))}
+                </nav>
+                <div className="citizen-v2-side-footer">
+                    <Link to="/" className="citizen-v2-nav-item logout">
+                        Logout
+                    </Link>
+                </div>
+            </aside>
+        );
+    }
+
     return (
         <aside className="sidebar">
             <h3>Admin Panel</h3>

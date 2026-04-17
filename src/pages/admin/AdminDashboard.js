@@ -1,12 +1,22 @@
 // AdminDashboard.jsx – Light theme, citizen styling
 // import { useEffect, useState, useCallback, useRef } from "react";
 import { useEffect, useState, useCallback } from "react";
+import { AlertTriangle, Building2, CheckCheck, Download, Eye, FileBarChart2, FileText, Settings, Users, Workflow } from "lucide-react";
 import api from "../../api/api";
 import "../../styles/admin.css";
 
 const PRIORITY_COLORS = { LOW: "#22c55e", MEDIUM: "#f59e0b", HIGH: "#f97316", CRITICAL: "#ef4444" };
 const STATUS_COLORS   = { PENDING: "#ef4444", ASSIGNED: "#f97316", IN_PROGRESS: "#3b82f6", RESOLVED: "#22c55e", DECLINED: "#8b5cf6" };
 const TABS = ["Complaints", "Users", "Departments", "Reports", "Settings"];
+const ACTION_STICKERS = {
+    view: "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f440.png",
+    escalate: "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f6a8.png",
+    resolve: "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/2705.png",
+    inprogress: "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/2699.png",
+    activate: "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f7e2.png",
+    deactivate: "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f534.png",
+    delete: "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f5d1.png",
+};
 
 function timeAgo(dateStr) {
     if (!dateStr) return "—";
@@ -333,22 +343,6 @@ function ComplaintsTab() {
         }
     });
 
-    const [imageErrors, setImageErrors] = useState({});
-
-// Same logic as MyComplaints.jsx
-    const getImageUrl = (photoUrl) => {
-        if (!photoUrl) return null;
-        if (photoUrl.startsWith('http://') || photoUrl.startsWith('https://')) return photoUrl;
-        let filename = photoUrl;
-        if (photoUrl.includes('/')) filename = photoUrl.split('/').pop();
-        if (photoUrl.includes('\\')) filename = photoUrl.split('\\').pop();
-        return `http://localhost:8080/api/files/${filename}`;  // adjust base URL if needed
-    };
-
-    const handleImageError = (complaintId) => {
-        setImageErrors(prev => ({ ...prev, [complaintId]: true }));
-    };
-
     return (
         <div className="tab-content">
             {toast && <div className={`toast toast-${toast.type}`}>{toast.msg}</div>}
@@ -366,18 +360,28 @@ function ComplaintsTab() {
                             {opts.split(",").map(o => <option key={o} value={o}>{o}</option>)}
                         </select>
                     ))}
-                    <button className="btn-outline" onClick={fetchComplaints}>↻ Reload</button>
+                    <button className="btn-outline toolbar-icon-btn" onClick={fetchComplaints}>
+                        <span className="toolbar-icon-btn__icon" aria-hidden="true">⟳</span>
+                        <span>Reload</span>
+                    </button>
                 </div>
 
                 <div className="toolbar-right">
                     {checkedIds.size > 0 && (
                         <div className="bulk-actions">
                             <span className="bulk-count">{checkedIds.size} selected</span>
-                            <button className="btn-action escalate" onClick={bulkEscalate} disabled={actionLoading}>🔴 Escalate All</button>
-                            <button className="btn-action resolve"  onClick={bulkResolve}  disabled={actionLoading}>✅ Resolve All</button>
+                            <button className="btn-action escalate" onClick={bulkEscalate} disabled={actionLoading}>
+                                <img className="action-sticker" src={ACTION_STICKERS.escalate} alt="" aria-hidden="true" /> Escalate All
+                            </button>
+                            <button className="btn-action resolve"  onClick={bulkResolve}  disabled={actionLoading}>
+                                <img className="action-sticker" src={ACTION_STICKERS.resolve} alt="" aria-hidden="true" /> Resolve All
+                            </button>
                         </div>
                     )}
-                    <button className="btn-outline" onClick={() => exportCSV(complaints, "complaints.csv")}>⬇ Export CSV</button>
+                    <button className="btn-outline toolbar-icon-btn" onClick={() => exportCSV(complaints, "complaints.csv")}>
+                        <span className="toolbar-icon-btn__icon" aria-hidden="true"><Download size={14} strokeWidth={2.1} /></span>
+                        <span>Export CSV</span>
+                    </button>
                     <div className="count-badge">{complaints.length} complaint{complaints.length !== 1 ? "s" : ""}</div>
                 </div>
             </div>
@@ -413,7 +417,7 @@ function ComplaintsTab() {
                                 <td className="complaint-title">{c.title}</td>
                                 <td><Badge value={c.category} colorMap={{ TRANSPORT:"#f59e0b", WATER:"#3b82f6", ELECTRICITY:"#eab308", WASTE:"#22c55e" }} /></td>
                                 <td>{c.area}</td>
-                                <td><Badge value={c.priority} colorMap={PRIORITY_COLORS} /></td>
+                                <td><Badge value={String(c.priority || "").toUpperCase()} colorMap={PRIORITY_COLORS} /></td>
                                 <td><Badge value={c.status} colorMap={STATUS_COLORS} /></td>
 
                                 {/* Assigned Staff Email */}
@@ -424,38 +428,34 @@ function ComplaintsTab() {
                                         "— Unassigned"}
                                 </td>
 
+                                {/* Complaint Photo Thumbnail */}
                                 <td className="photo-cell">
-                                    {c.photoUrl && !imageErrors[c.id] ? (
+                                    {c.photoUrl ? (
                                         <img
-                                            src={getImageUrl(c.photoUrl)}
+                                            src={c.photoUrl}
                                             alt="Complaint"
                                             className="complaint-thumbnail"
                                             onClick={() => setSelected(c)}
                                             title="Click to view full size"
-                                            onError={() => handleImageError(c.id)}
-                                            style={{
-                                                width: '48px',
-                                                height: '48px',
-                                                objectFit: 'cover',
-                                                borderRadius: '0.5rem',
-                                                cursor: 'pointer',
-                                                border: '1px solid #e5e7eb'
-                                            }}
                                         />
                                     ) : (
-                                        <span className="no-photo" style={{ fontSize: '0.75rem', color: '#9ca3af' }}>
-            {c.photoUrl ? '⚠️ Broken' : '—'}
-        </span>
+                                        <span className="no-photo">—</span>
                                     )}
                                 </td>
 
                                 <td className="mono small age-cell">{timeAgo(c.createdAt)}</td>
                                 <td>
                                     <div className="action-btns">
-                                        <button className="act-btn view" onClick={() => setSelected(c)} title="View & Manage">👁</button>
-                                        <button className="act-btn escalate" onClick={() => handleEscalate(c.id)} title="Escalate">🔴</button>
+                                        <button className="act-btn view" onClick={() => setSelected(c)} title="View & Manage">
+                                            <img className="action-sticker action-sticker-small" src={ACTION_STICKERS.view} alt="" aria-hidden="true" />
+                                        </button>
+                                        <button className="act-btn escalate" onClick={() => handleEscalate(c.id)} title="Escalate">
+                                            <img className="action-sticker action-sticker-small" src={ACTION_STICKERS.escalate} alt="" aria-hidden="true" />
+                                        </button>
                                         {c.status !== "RESOLVED" && (
-                                            <button className="act-btn resolve" onClick={() => handleStatus(c.id, "RESOLVED")} title="Resolve">✅</button>
+                                            <button className="act-btn resolve" onClick={() => handleStatus(c.id, "RESOLVED")} title="Resolve">
+                                                <img className="action-sticker action-sticker-small" src={ACTION_STICKERS.resolve} alt="" aria-hidden="true" />
+                                            </button>
                                         )}
                                     </div>
                                 </td>
@@ -474,36 +474,21 @@ function ComplaintsTab() {
                 }}>
                     <div className="detail-grid">
                         <div><label>Category</label><Badge value={selected.category} colorMap={{ TRANSPORT:"#f59e0b", WATER:"#3b82f6", ELECTRICITY:"#eab308", WASTE:"#22c55e" }} /></div>
-                        <div><label>Priority</label><Badge value={selected.priority} colorMap={PRIORITY_COLORS} /></div>
+                        <div><label>Priority</label><Badge value={String(selected.priority || "").toUpperCase()} colorMap={PRIORITY_COLORS} /></div>
                         <div><label>Status</label><Badge value={selected.status} colorMap={STATUS_COLORS} /></div>
                         <div><label>Area</label><span>{selected.area}</span></div>
                         <div><label>Citizen Email</label><span>{selected.citizenEmail || selected.user?.email || "—"}</span></div>
                         <div><label>Department</label><span>{selected.departmentName || "—"}</span></div>
 
-                        {selected.photoUrl && !imageErrors[selected.id] ? (
+                        {/* Complaint Photo - Full View */}
+                        {selected.photoUrl && (
                             <div className="full photo-section">
                                 <label>Complaint Photo</label>
                                 <img
-                                    src={getImageUrl(selected.photoUrl)}
+                                    src={selected.photoUrl}
                                     alt="Complaint evidence"
                                     className="complaint-photo-full"
-                                    onError={() => handleImageError(selected.id)}
-                                    style={{
-                                        width: '100%',
-                                        maxHeight: '300px',
-                                        objectFit: 'contain',
-                                        borderRadius: '0.75rem',
-                                        border: '1px solid #e5e7eb',
-                                        marginTop: '0.5rem'
-                                    }}
                                 />
-                            </div>
-                        ) : (
-                            <div className="full photo-section">
-                                <label>Complaint Photo</label>
-                                <div className="no-photo" style={{ padding: '1rem', textAlign: 'center', background: '#f9fafb', borderRadius: '0.75rem', color: '#9ca3af' }}>
-                                    {selected.photoUrl ? '⚠️ Image could not be loaded' : 'No photo attached'}
-                                </div>
                             </div>
                         )}
 
@@ -557,9 +542,15 @@ function ComplaintsTab() {
                     <div className="modal-section">
                         <div className="section-label">⚡ Quick Actions</div>
                         <div className="quick-actions">
-                            <button className="btn-action escalate" onClick={() => handleEscalate(selected.id)} disabled={actionLoading}>🔴 Escalate to Critical</button>
-                            <button className="btn-action resolve" onClick={() => handleStatus(selected.id, "RESOLVED")} disabled={actionLoading}>✅ Mark Resolved</button>
-                            <button className="btn-action inprogress" onClick={() => handleStatus(selected.id, "IN_PROGRESS")} disabled={actionLoading}>⚙ Set In Progress</button>
+                            <button className="btn-action escalate" onClick={() => handleEscalate(selected.id)} disabled={actionLoading}>
+                                <img className="action-sticker" src={ACTION_STICKERS.escalate} alt="" aria-hidden="true" /> Escalate to Critical
+                            </button>
+                            <button className="btn-action resolve" onClick={() => handleStatus(selected.id, "RESOLVED")} disabled={actionLoading}>
+                                <img className="action-sticker" src={ACTION_STICKERS.resolve} alt="" aria-hidden="true" /> Mark Resolved
+                            </button>
+                            <button className="btn-action inprogress" onClick={() => handleStatus(selected.id, "IN_PROGRESS")} disabled={actionLoading}>
+                                <img className="action-sticker" src={ACTION_STICKERS.inprogress} alt="" aria-hidden="true" /> Set In Progress
+                            </button>
                         </div>
                     </div>
                 </Modal>
@@ -636,10 +627,16 @@ function UsersTab() {
                         <option value="STAFF">Staff</option>
                         <option value="CITIZEN">Citizen</option>
                     </select>
-                    <button className="btn-outline" onClick={fetchAll}>↻ Reload</button>
+                    <button className="btn-outline toolbar-icon-btn" onClick={fetchAll}>
+                        <span className="toolbar-icon-btn__icon" aria-hidden="true">⟳</span>
+                        <span>Reload</span>
+                    </button>
                 </div>
                 <div className="toolbar-right">
-                    <button className="btn-outline" onClick={() => exportCSV(users, "users.csv")}>⬇ Export CSV</button>
+                    <button className="btn-outline toolbar-icon-btn" onClick={() => exportCSV(users, "users.csv")}>
+                        <span className="toolbar-icon-btn__icon" aria-hidden="true"><Download size={14} strokeWidth={2.1} /></span>
+                        <span>Export CSV</span>
+                    </button>
                     <button className="btn-primary" onClick={() => setShowAdd(true)}>+ Add User</button>
                 </div>
             </div>
@@ -684,10 +681,22 @@ function UsersTab() {
                                 </td>
                                 <td>
                                     <div className="action-btns">
-                                        <button className="act-btn" onClick={() => toggleActive(u)} title={u.active ? "Deactivate" : "Activate"}>
-                                            {u.active ? "🔴" : "🟢"}
+                                        <button className={`act-btn ${u.active ? "deactivate" : "activate"}`} onClick={() => toggleActive(u)} title={u.active ? "Deactivate" : "Activate"}>
+                                            <img
+                                                className="action-sticker action-sticker-small"
+                                                src={u.active ? ACTION_STICKERS.deactivate : ACTION_STICKERS.activate}
+                                                alt=""
+                                                aria-hidden="true"
+                                            />
                                         </button>
-                                        <button className="act-btn delete" onClick={() => deleteUser(u.id)} title="Delete">🗑</button>
+                                        <button className="act-btn delete" onClick={() => deleteUser(u.id)} title="Delete">
+                                            <img
+                                                className="action-sticker action-sticker-small"
+                                                src={ACTION_STICKERS.delete}
+                                                alt=""
+                                                aria-hidden="true"
+                                            />
+                                        </button>
                                     </div>
                                 </td>
                             </tr>
@@ -1142,11 +1151,17 @@ function ReportsTab() {
                         <option value={14}>Last 14 days</option>
                         <option value={30}>Last 30 days</option>
                     </select>
-                    <button className="btn-outline" onClick={fetchReports}>↻ Reload</button>
+                    <button className="btn-outline toolbar-icon-btn" onClick={fetchReports}>
+                        <span className="toolbar-icon-btn__icon" aria-hidden="true">⟳</span>
+                        <span>Reload</span>
+                    </button>
                 </div>
                 <div className="toolbar-right">
                     <button className="btn-outline" onClick={handlePrint}>🖨 Print Report</button>
-                    <button className="btn-outline" onClick={exportStaffCSV} disabled={!perf.length}>⬇ Export Staff CSV</button>
+                    <button className="btn-outline toolbar-icon-btn" onClick={exportStaffCSV} disabled={!perf.length}>
+                        <span className="toolbar-icon-btn__icon" aria-hidden="true"><Download size={14} strokeWidth={2.1} /></span>
+                        <span>Export Staff CSV</span>
+                    </button>
                 </div>
             </div>
 
@@ -1556,9 +1571,9 @@ function SettingsTab() {
             {/* ── Priority rules (read-only reference) ── */}
             <SettingsSection icon="⚡" title="Priority Rules (Reference)">
                 {[
-                    { p: "LOW",      color: "#22c55e", r: "Routine, non-urgent — no SLA" },
-                    { p: "MEDIUM",   color: "#f59e0b", r: "Response within 5 days" },
-                    { p: "HIGH",     color: "#f97316", r: "Response within 24 hours" },
+                    { p: "LOW", color: "#22c55e", r: "Routine, non-urgent — no SLA" },
+                    { p: "MEDIUM", color: "#f59e0b", r: "Response within 5 days" },
+                    { p: "HIGH", color: "#f97316", r: "Response within 24 hours" },
                     { p: "CRITICAL", color: "#ef4444", r: "Immediate escalation required" },
                 ].map(({ p, color, r }) => (
                     <div key={p} style={{
@@ -1612,7 +1627,13 @@ export { ReportsTab, SettingsTab };
 // ── MAIN EXPORT ────────────────────────────────────────────────
 export default function AdminDashboard() {
     const [activeTab, setActiveTab] = useState("Complaints");
-    const tabIcons = { Complaints: "📋", Users: "👥", Departments: "🏢", Reports: "📊", Settings: "⚙️" };
+    const tabIcons = {
+        Complaints: FileText,
+        Users,
+        Departments: Building2,
+        Reports: FileBarChart2,
+        Settings,
+    };
     return (
         <div className="admin-dashboard">
             <div className="dash-header">
@@ -1622,11 +1643,17 @@ export default function AdminDashboard() {
                 </div>
             </div>
             <div className="dash-tabs">
-                {TABS.map(tab => (
-                    <button key={tab} className={`dash-tab ${activeTab === tab ? "active" : ""}`} onClick={() => setActiveTab(tab)}>
-                        {tabIcons[tab]} {tab}
-                    </button>
-                ))}
+                {TABS.map(tab => {
+                    const Icon = tabIcons[tab];
+                    return (
+                        <button key={tab} className={`dash-tab ${activeTab === tab ? "active" : ""}`} onClick={() => setActiveTab(tab)}>
+                            <span className="dash-tab-icon" aria-hidden="true">
+                                <Icon size={16} strokeWidth={2.1} />
+                            </span>
+                            <span>{tab}</span>
+                        </button>
+                    );
+                })}
             </div>
             <div className="dash-body">
                 {activeTab === "Complaints"  && <ComplaintsTab />}

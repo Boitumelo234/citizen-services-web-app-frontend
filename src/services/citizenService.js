@@ -25,15 +25,18 @@ export const updateProfile = async (payload) => {
     return data;
 };
 
-// Notifications
-export const getNotifications = () =>
-    api.get("/citizen/notifications").then(r => r.data);
+export const getNotifications = async () => {
+    const { data } = await api.get("/citizen/notifications");
+    return data;
+};
 
-export const markNotificationRead = (id) =>
-    api.patch(`/citizen/notifications/${id}/read`).then(r => r.data);
+export const markNotificationRead = async (id) => {
+    await api.patch(`/citizen/notifications/${id}/read`);
+};
 
-export const markAllNotificationsRead = () =>
-    api.patch("/citizen/notifications/read-all").then(r => r.data);
+export const markAllNotificationsRead = async () => {
+    await api.patch("/citizen/notifications/read-all");
+};
 
 export const getMapComplaints = async () => {
     const { data } = await api.get("/complaints/map");

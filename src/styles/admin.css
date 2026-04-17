@@ -36,7 +36,7 @@
     display: flex;
     min-height: 100vh;
     background: var(--bg-light);
-    font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    font-family: "Satoshi", "Segoe UI", sans-serif;
     color: var(--text-dark);
 }
 
@@ -66,7 +66,7 @@
     min-width: 0;           /* prevents flex children from overflowing */
     padding: 2rem 2.5rem;
     background: var(--bg-light);
-    font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    font-family: "Satoshi", "Segoe UI", sans-serif;
     color: var(--text-dark);
     min-height: 100vh;
 }
@@ -75,7 +75,7 @@
     flex: 1;
     min-width: 0;
     background: var(--bg-light);
-    font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    font-family: "Satoshi", "Segoe UI", sans-serif;
     color: var(--text-dark);
     min-height: 100vh;
     display: flex;
@@ -111,6 +111,17 @@
     color: var(--text-medium);
     font-size: 0.95rem;
     margin: 0;
+}
+
+.admin-dashboard button,
+.admin-dashboard select,
+.admin-dashboard input,
+.admin-dashboard textarea,
+.admin-overview button,
+.admin-overview select,
+.admin-overview input,
+.admin-overview textarea {
+    font-family: "Satoshi", "Segoe UI", sans-serif;
 }
 
 /* ─── OVERVIEW HEADER ──────────────────────────────────── */
@@ -460,6 +471,9 @@
     z-index: 40;
 }
 .dash-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
     padding: 0.7rem 1.2rem;
     background: transparent;
     border: none;
@@ -470,6 +484,12 @@
     transition: all 0.2s;
     font-family: 'Inter', sans-serif;
     font-size: 0.875rem;
+}
+.dash-tab-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
 }
 .dash-tab:hover  { color: var(--primary); border-bottom-color: var(--border); }
 .dash-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
@@ -524,22 +544,26 @@
 .empty-row { text-align: center; color: var(--text-light); padding: 2rem !important; }
 
 /* ─── FILTERS & BUTTONS ────────────────────────────────── */
-.filters { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+.filters { display: flex; align-items: center; gap: 0.5rem; flex-wrap: nowrap; }
 .toolbar-right { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
 
 .filter-select {
+    flex: 0 0 auto;
+    min-width: 130px;
+    max-width: 150px;
     background: var(--card-bg);
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
-    padding: 0.5rem 2rem 0.5rem 0.9rem;
-    font-size: 0.8rem;
+    padding: 0.42rem 1.75rem 0.42rem 0.7rem;
+    font-size: 0.76rem;
     font-weight: 500;
     color: var(--text-dark);
     cursor: pointer;
     appearance: none;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 12 12'%3E%3Cpath fill='%234b5563' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
-    background-position: right 0.7rem center;
+    background-position: right 0.55rem center;
+    background-size: 11px 11px;
 }
 .btn-primary {
     background: var(--primary);
@@ -570,7 +594,32 @@
     font-family: 'Inter', sans-serif;
 }
 .btn-outline:hover { background: #f3f4f6; border-color: var(--border-strong); }
+
+.toolbar-icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    min-height: 36px;
+    white-space: nowrap;
+}
+
+.toolbar-icon-btn__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1rem;
+    height: 1rem;
+    color: var(--primary);
+    font-size: 0.92rem;
+    line-height: 1;
+}
+
 .btn-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
     border-radius: var(--radius-lg);
     padding: 0.4rem 0.9rem;
     font-weight: 600;
@@ -613,6 +662,27 @@
     font-size: 0.85rem;
 }
 .act-btn:hover { background: #f3f4f6; border-color: var(--border-strong); }
+.act-btn svg,
+.btn-action svg {
+    flex-shrink: 0;
+}
+.action-sticker {
+    width: 18px;
+    height: 18px;
+    object-fit: contain;
+    filter: drop-shadow(0 4px 8px rgba(15, 23, 42, 0.14));
+    flex-shrink: 0;
+}
+.action-sticker-small {
+    width: 16px;
+    height: 16px;
+}
+.act-btn.view { color: #2563eb; }
+.act-btn.activate { color: #16a34a; }
+.act-btn.deactivate { color: #dc2626; }
+.act-btn.escalate { color: #dc2626; }
+.act-btn.resolve { color: #16a34a; }
+.act-btn.delete { color: #b91c1c; }
 
 /* ─── DEPARTMENT CARDS ─────────────────────────────────── */
 .dept-cards {
@@ -828,21 +898,4 @@
     }
     .admin-layout { display: block; }
     .admin-overview, .admin-dashboard { margin: 0; padding: 1rem; }
-}
-
-.complaint-thumbnail {
-    width: 48px;
-    height: 48px;
-    object-fit: cover;
-    border-radius: 8px;
-    border: 1px solid #e2e8f0;
-    cursor: pointer;
-    transition: transform 0.1s ease;
-}
-.complaint-thumbnail:hover {
-    transform: scale(1.05);
-}
-.photo-cell {
-    text-align: center;
-    vertical-align: middle;
 }

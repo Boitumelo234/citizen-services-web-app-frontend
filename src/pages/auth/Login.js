@@ -1,4 +1,3 @@
-// pages/auth/Login.jsx
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
@@ -7,10 +6,10 @@ import Button from "../../components/common/Button";
 import "./Login.css";
 
 function Login({ onLoginSuccess, onSwitchToRegister, onSwitchToForgot }) {
-    const [email, setEmail]       = useState("");
+    const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
-    const [error, setError]       = useState("");
-    const [loading, setLoading]   = useState(false);
+    const [error, setError] = useState("");
+    const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
 
     const handleSubmit = async (e) => {
@@ -22,7 +21,7 @@ function Login({ onLoginSuccess, onSwitchToRegister, onSwitchToForgot }) {
             const response = await fetch("http://localhost:8081/api/auth/login", {
                 method: "POST",
                 headers: { "Content-Type": "application/x-www-form-urlencoded" },
-                body: new URLSearchParams({ username: email, password }),
+                body: new URLSearchParams({ username: email, password: password }),
             });
 
             const data = await response.json();
@@ -30,27 +29,11 @@ function Login({ onLoginSuccess, onSwitchToRegister, onSwitchToForgot }) {
 
             localStorage.setItem("access_token", data.access_token);
             const decoded = jwtDecode(data.access_token);
-
-            let rawRole = decoded.role
-                || decoded.roles
-                || (Array.isArray(decoded.authorities) ? decoded.authorities[0] : null)
-                || "";
-
-            if (Array.isArray(rawRole)) rawRole = rawRole[0];
-            const role = rawRole.replace("ROLE_", "").toLowerCase();
-
-            const userInfo = {
-                email: decoded.sub || decoded.email || email,
-                fullName: decoded.fullName || decoded.name || "",
-                departmentName: decoded.departmentName || decoded.department || "",
-                role: role.toUpperCase(),
-            };
-            localStorage.setItem("user", JSON.stringify(userInfo));
+            const role = (decoded.role || "").toLowerCase();
 
             if (onLoginSuccess) onLoginSuccess();
 
-            if (role === "admin") navigate("/admin/overview");
-            else if (role === "staff") navigate("/staff/dashboard");
+            if (role === "admin") navigate("/admin");
             else navigate("/citizen");
 
         } catch (err) {
@@ -74,6 +57,7 @@ function Login({ onLoginSuccess, onSwitchToRegister, onSwitchToForgot }) {
                     placeholder="Enter your email"
                     required
                 />
+
                 <Input
                     label="Password"
                     type="password"
@@ -83,6 +67,7 @@ function Login({ onLoginSuccess, onSwitchToRegister, onSwitchToForgot }) {
                     required
                 />
 
+                {/* Updated: Forgot Password link placed before the submit button */}
                 <div className="forgot-password-link">
                     <span className="auth-link-small" onClick={onSwitchToForgot}>
                         Forgot Password?
@@ -97,8 +82,7 @@ function Login({ onLoginSuccess, onSwitchToRegister, onSwitchToForgot }) {
             </form>
 
             <p className="switch-prompt">
-                Don't have an account?{" "}
-                <span className="auth-link" onClick={onSwitchToRegister}>Register here</span>
+                Don't have an account? <span className="auth-link" onClick={onSwitchToRegister}>Register here</span>
             </p>
         </div>
     );
