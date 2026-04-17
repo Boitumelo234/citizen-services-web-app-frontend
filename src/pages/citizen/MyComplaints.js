@@ -5,8 +5,36 @@
 import '../../styles/dashboard.css';
 import { Link } from 'react-router-dom';
 import { useState, useEffect, useCallback } from 'react';
+import { MapPin } from 'lucide-react';
 import ComplaintDetailsModal from '../citizen/modal/ComplaintDetailsModal';
 import AddUpdateModal from '../citizen/modal/AddUpdateModal';
+
+const stickerConfig = {
+    'Infrastructure & Roads': {
+        icon: 'https://em-content.zobj.net/source/apple/391/construction_1f6a7.png',
+        background: 'linear-gradient(135deg, #fb923c, #ef4444)',
+    },
+    'Power Outage': {
+        icon: 'https://em-content.zobj.net/source/apple/391/high-voltage_26a1.png',
+        background: 'linear-gradient(135deg, #facc15, #f97316)',
+    },
+    'Water & Sanitation': {
+        icon: 'https://em-content.zobj.net/source/apple/391/potable-water_1f6b0.png',
+        background: 'linear-gradient(135deg, #38bdf8, #2563eb)',
+    },
+    'Electricity & Energy': {
+        icon: 'https://em-content.zobj.net/source/apple/391/electric-plug_1f50c.png',
+        background: 'linear-gradient(135deg, #facc15, #eab308)',
+    },
+    'Illegal Dumping': {
+        icon: 'https://em-content.zobj.net/source/apple/391/wastebasket_1f5d1-fe0f.png',
+        background: 'linear-gradient(135deg, #14b8a6, #0f766e)',
+    },
+    Other: {
+        icon: 'https://em-content.zobj.net/source/apple/391/clipboard_1f4cb.png',
+        background: 'linear-gradient(135deg, #a78bfa, #6366f1)',
+    },
+};
 
 function MyComplaints() {
     const [complaints, setComplaints] = useState([]);
@@ -77,6 +105,8 @@ function MyComplaints() {
         setImageErrors((prev) => ({ ...prev, [complaintId]: true }));
 >>>>>>> 3b4c154 (feat: restyle my complaints page)
     };
+
+    const getSticker = (category) => stickerConfig[category] || stickerConfig.Other;
 
     const openDetails = (comp) => {
         setSelectedComplaint(comp);
@@ -169,7 +199,7 @@ function MyComplaints() {
                     <h1>My Complaints</h1>
                     <p>Track the status of all your reported issues</p>
                 </div>
-                <Link className="citizen-v2-primary-btn" to="/citizen/submit">
+                <Link className="citizen-v2-primary-btn my-complaints-header-btn" to="/citizen/submit">
                     New Complaint
                 </Link>
             </section>
@@ -207,6 +237,7 @@ function MyComplaints() {
                         const hasImageError = imageErrors[comp.id];
                         const statusKey = comp.status?.toLowerCase() || 'pending';
                         const sc = statusConfig[statusKey] || statusConfig.pending;
+                        const sticker = getSticker(comp.category);
 
                         return (
 <<<<<<< HEAD
@@ -301,50 +332,67 @@ function MyComplaints() {
 =======
                             <article key={comp.id} className="citizen-v2-card my-complaint-card">
                                 <div className="my-complaint-top">
+<<<<<<< HEAD
                                     <div>
                                         <p className="my-complaint-ref">{comp.referenceNumber}</p>
                                         <h3 className="my-complaint-title">{comp.category}</h3>
                                         <p className="my-complaint-meta">Submitted {formatDate(comp.createdAt)}</p>
 >>>>>>> 3b4c154 (feat: restyle my complaints page)
+=======
+                                    <div className="my-complaint-heading">
+                                        {sticker ? (
+                                            <div
+                                                className="my-complaint-sticker"
+                                                style={{ background: sticker.background }}
+                                            >
+                                                <img
+                                                    src={sticker.icon}
+                                                    alt={comp.category}
+                                                    className="my-complaint-sticker-icon"
+                                                />
+                                            </div>
+                                        ) : null}
+                                        <div>
+                                            <p className="my-complaint-ref">{comp.referenceNumber}</p>
+                                            <h3 className="my-complaint-title">{comp.category}</h3>
+                                            <p className="my-complaint-meta">Submitted {formatDate(comp.createdAt)}</p>
+                                        </div>
+>>>>>>> 86ef931 (feat: update citizen pages and overview trends)
                                     </div>
 
                                     <span
-                                        className="my-complaint-status"
-                                        style={{
-                                            background: sc.bg,
-                                            border: `1px solid ${sc.border}`,
-                                            color: sc.text,
-                                        }}
+                                        className="my-complaint-status my-complaint-status-pill"
                                     >
-                                        <span className="my-complaint-status-dot" style={{ background: sc.dot }} />
                                         {comp.status || 'Pending'}
                                     </span>
                                 </div>
 
                                 <p className="my-complaint-description">{comp.description}</p>
 
-                                <div className="my-complaint-grid">
-                                    {comp.location && (
-                                        <div>
-                                            <span className="my-complaint-label">Location</span>
-                                            <p className="my-complaint-value">{comp.location}</p>
-                                        </div>
-                                    )}
-
-                                    {comp.photoUrl && !hasImageError && (
-                                        <div>
-                                            <span className="my-complaint-label">Attachment</span>
-                                            <div className="my-complaint-media">
-                                                <img
-                                                    src={imageUrl}
-                                                    alt="Complaint attachment"
-                                                    className="my-complaint-media-image"
-                                                    onError={() => handleImageError(comp.id)}
-                                                />
+                                {comp.location && (
+                                    <div className="my-complaint-location-block">
+                                        <p className="my-complaint-location-title">Location</p>
+                                        <div className="my-complaint-location-chip">
+                                            <div className="my-complaint-location-icon">
+                                                <MapPin size={16} />
                                             </div>
+                                            <span>{comp.location}</span>
                                         </div>
-                                    )}
-                                </div>
+                                    </div>
+                                )}
+
+                                {comp.photoUrl && !hasImageError && (
+                                    <div className="my-complaint-media-wrap">
+                                        <div className="my-complaint-media">
+                                            <img
+                                                src={imageUrl}
+                                                alt="Complaint attachment"
+                                                className="my-complaint-media-image"
+                                                onError={() => handleImageError(comp.id)}
+                                            />
+                                        </div>
+                                    </div>
+                                )}
 
                                 <div className="my-complaint-actions">
                                     <button

@@ -10,6 +10,11 @@ export const getOverview = async () => {
     return data;
 };
 
+export const getMyComplaints = async () => {
+    const { data } = await api.get("/complaints");
+    return data;
+};
+
 export const getProfile = async () => {
     const { data } = await api.get("/citizen/profile");
     return data;

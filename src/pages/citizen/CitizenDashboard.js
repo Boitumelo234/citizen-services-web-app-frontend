@@ -23,6 +23,33 @@ const iconMap = {
 
 const defaultIcon = { icon: AlertTriangle, iconClass: "cat-orange" };
 
+const stickerConfig = {
+    "Infrastructure & Roads": {
+        icon: "https://em-content.zobj.net/source/apple/391/construction_1f6a7.png",
+        background: "linear-gradient(135deg, #fb923c, #ef4444)",
+    },
+    "Power Outage": {
+        icon: "https://em-content.zobj.net/source/apple/391/high-voltage_26a1.png",
+        background: "linear-gradient(135deg, #facc15, #f97316)",
+    },
+    "Water & Sanitation": {
+        icon: "https://em-content.zobj.net/source/apple/391/potable-water_1f6b0.png",
+        background: "linear-gradient(135deg, #38bdf8, #2563eb)",
+    },
+    "Electricity & Energy": {
+        icon: "https://em-content.zobj.net/source/apple/391/electric-plug_1f50c.png",
+        background: "linear-gradient(135deg, #facc15, #eab308)",
+    },
+    "Illegal Dumping": {
+        icon: "https://em-content.zobj.net/source/apple/391/wastebasket_1f5d1-fe0f.png",
+        background: "linear-gradient(135deg, #14b8a6, #0f766e)",
+    },
+    Other: {
+        icon: "https://em-content.zobj.net/source/apple/391/clipboard_1f4cb.png",
+        background: "linear-gradient(135deg, #a78bfa, #6366f1)",
+    },
+};
+
 function CitizenDashboard() {
     const [dashboard, setDashboard] = useState({
         citizenName: "Citizen",
@@ -53,6 +80,8 @@ function CitizenDashboard() {
 
         loadDashboard();
     }, []);
+
+    const getSticker = (category) => stickerConfig[category] || stickerConfig.Other;
 
     const complaintCategories = dashboard.categories.map((category) => ({
         ...category,
@@ -129,11 +158,20 @@ function CitizenDashboard() {
                         <div className="category-list">
                             {complaintCategories.length === 0 ? <p className="subtitle">No category data yet.</p> : null}
                             {complaintCategories.map((cat) => {
-                                const Icon = cat.icon;
+                                const sticker = getSticker(cat.name);
                                 return (
                                     <div key={cat.name} className="category-item">
                                         <div className="category-left">
-                                            <div className={`cat-icon ${cat.iconClass}`}><Icon size={18} /></div>
+                                            <div
+                                                className="dashboard-sticker"
+                                                style={{ background: sticker.background }}
+                                            >
+                                                <img
+                                                    src={sticker.icon}
+                                                    alt={cat.name}
+                                                    className="dashboard-sticker-icon"
+                                                />
+                                            </div>
                                             <span>{cat.name}</span>
                                         </div>
                                         <strong>{cat.count}</strong>
@@ -152,11 +190,20 @@ function CitizenDashboard() {
                     <div className="activity-list">
                         {recentComplaints.length === 0 ? <p className="subtitle">No recent complaint activity yet.</p> : null}
                         {recentComplaints.map((complaint) => {
-                            const Icon = complaint.icon;
+                            const sticker = getSticker(complaint.category);
                             return (
                                 <div key={complaint.id} className="activity-item">
                                     <div className="activity-left">
-                                        <div className={`cat-icon ${complaint.iconClass}`}><Icon size={18} /></div>
+                                        <div
+                                            className="dashboard-sticker dashboard-sticker-small"
+                                            style={{ background: sticker.background }}
+                                        >
+                                            <img
+                                                src={sticker.icon}
+                                                alt={complaint.category}
+                                                className="dashboard-sticker-icon dashboard-sticker-icon-small"
+                                            />
+                                        </div>
                                         <div>
                                             <h4>{complaint.title || complaint.id}</h4>
                                             <p>{complaint.category}</p>
