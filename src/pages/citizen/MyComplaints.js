@@ -50,7 +50,7 @@ function MyComplaints() {
             return;
         }
         try {
-            const res = await fetch('http://localhost:8081/api/complaints', {
+            const res = await fetch('http://localhost:8080/api/complaints', {
                 headers: { Authorization: `Bearer ${token}` },
             });
             if (!res.ok) throw new Error('Failed to load complaints');
@@ -81,7 +81,7 @@ function MyComplaints() {
         let filename = photoUrl;
         if (photoUrl.includes('/')) filename = photoUrl.split('/').pop();
         if (photoUrl.includes('\\')) filename = photoUrl.split('\\').pop();
-        return `http://localhost:8081/api/files/${filename}`;
+        return `http://localhost:8080/api/files/${filename}`;
     };
 
     const handleImageError = (complaintId) => {

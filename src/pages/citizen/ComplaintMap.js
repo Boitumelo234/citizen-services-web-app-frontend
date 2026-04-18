@@ -110,7 +110,7 @@ function ComplaintFormModal({ selectedLocation, onSubmit, onCancel }) {
             })], { type: 'application/json' }));
             if (selectedFile) body.append('photo', selectedFile);
 
-            const response = await fetch('http://localhost:8081/api/complaints', {
+            const response = await fetch('http://localhost:8080/api/complaints', {
                 method: 'POST',
                 headers: { Authorization: `Bearer ${token}` },
                 body,

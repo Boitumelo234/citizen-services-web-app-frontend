@@ -11,7 +11,7 @@ const getComplaintImageUrl = (photoUrl) => {
     let filename = photoUrl;
     if (photoUrl.includes("/")) filename = photoUrl.split("/").pop();
     if (photoUrl.includes("\\")) filename = photoUrl.split("\\").pop();
-    return `http://localhost:8081/api/files/${filename}`;
+    return `http://localhost:8080/api/files/${filename}`;
 };
 
 const PRIORITY_COLORS = { LOW: "#22c55e", MEDIUM: "#f59e0b", HIGH: "#f97316", CRITICAL: "#ef4444" };
